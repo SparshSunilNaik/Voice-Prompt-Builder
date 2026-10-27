@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+node_modules/
+extension/dist/
+extension/coverage/
+*.log
+.DS_Store
+.idea/
+.vscode/
+backend/.mypy_cache/
+backend/.ruff_cache/
