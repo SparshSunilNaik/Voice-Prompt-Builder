@@ -1,32 +1,39 @@
-import { useEffect, useReducer, useRef } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import { initialWorkflow, workflowReducer, type WorkflowState } from '../state/workflow'
 
 const KEY = 'voicePromptWorkflow'
 
+function loadLocalWorkflow(): WorkflowState {
+  const saved = localStorage.getItem(KEY)
+  if (!saved) return initialWorkflow
+  try { return JSON.parse(saved) as WorkflowState } catch {
+    localStorage.removeItem(KEY)
+    return initialWorkflow
+  }
+}
+
 export function useWorkflow() {
-  const [state, dispatch] = useReducer(workflowReducer, initialWorkflow)
-  const hydrated = useRef(false)
+  const usesChromeStorage = typeof chrome !== 'undefined' && Boolean(chrome.storage?.local)
+  const [state, dispatch] = useReducer(
+    workflowReducer,
+    undefined,
+    () => usesChromeStorage ? initialWorkflow : loadLocalWorkflow(),
+  )
+  const [ready, setReady] = useState(!usesChromeStorage)
 
   useEffect(() => {
-    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-      chrome.storage.local.get(KEY).then((value) => {
-        if (value[KEY]) dispatch({ type: 'HYDRATE', state: value[KEY] as WorkflowState })
-        hydrated.current = true
-      }).catch(() => { hydrated.current = true })
-    } else {
-      const saved = localStorage.getItem(KEY)
-      if (saved) {
-        try { dispatch({ type: 'HYDRATE', state: JSON.parse(saved) as WorkflowState }) } catch { localStorage.removeItem(KEY) }
-      }
-      hydrated.current = true
-    }
-  }, [])
+    if (!usesChromeStorage) return
+    chrome.storage.local.get(KEY).then((value) => {
+      if (value[KEY]) dispatch({ type: 'HYDRATE', state: value[KEY] as WorkflowState })
+      setReady(true)
+    }).catch(() => { setReady(true) })
+  }, [usesChromeStorage])
 
   useEffect(() => {
-    if (!hydrated.current) return
-    if (typeof chrome !== 'undefined' && chrome.storage?.local) chrome.storage.local.set({ [KEY]: state }).catch(() => undefined)
+    if (!ready) return
+    if (usesChromeStorage) chrome.storage.local.set({ [KEY]: state }).catch(() => undefined)
     else localStorage.setItem(KEY, JSON.stringify(state))
-  }, [state])
+  }, [ready, state, usesChromeStorage])
 
-  return [state, dispatch] as const
+  return [state, dispatch, ready] as const
 }

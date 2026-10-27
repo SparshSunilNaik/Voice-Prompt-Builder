@@ -6,6 +6,7 @@ beforeEach(() => localStorage.clear())
 
 test('persists non-audio workflow state and restores it', async () => {
   const first = renderHook(() => useWorkflow())
+  await waitFor(() => expect(first.result.current[2]).toBe(true))
   act(() => first.result.current[1]({ type: 'SET_INPUT', value: 'Persist this idea' }))
   await waitFor(() => expect(localStorage.getItem('voicePromptWorkflow')).toContain('Persist this idea'))
   first.unmount()
