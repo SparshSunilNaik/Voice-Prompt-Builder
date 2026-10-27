@@ -1,6 +1,16 @@
 import json
 
-from app.models.contracts import GenerateRequest, IntentAnalysis, Methodology, RefineRequest
+import pytest
+from pydantic import ValidationError
+
+from app.models.contracts import (
+    FollowUpQuestion,
+    FollowUpSet,
+    GenerateRequest,
+    IntentAnalysis,
+    Methodology,
+    RefineRequest,
+)
 from app.services.prompt_engine import analysis_user_prompt, followup_user_prompt, generation_user_prompt
 
 
@@ -45,3 +55,41 @@ def test_generation_distinguishes_skipped_and_confirmed_answers() -> None:
     payload = json.loads(generation_user_prompt(request))
     assert payload["confirmed_followup_answers"][0]["answer"] == "Agents"
     assert payload["skipped_question_ids"] == ["budget"]
+
+
+def test_revision_context_preserves_previous_prompt_and_requested_change() -> None:
+    request = GenerateRequest(
+        input="Build support AI",
+        analysis=analysis(),
+        methodology=analysis().methodology,
+        previous_prompt="First draft",
+        revision_request="Prefer a deterministic escalation flow",
+    )
+    payload = json.loads(generation_user_prompt(request))
+    assert payload["previous_prompt"] == "First draft"
+    assert payload["revision_request"].startswith("Prefer")
+
+
+def test_followups_have_unique_ids_and_hard_limit() -> None:
+    def question(identifier: str) -> FollowUpQuestion:
+        return FollowUpQuestion(
+            id=identifier, question="Who uses this?", relevance="Changes audience", skippable=True
+        )
+
+    with pytest.raises(ValidationError, match="unique"):
+        FollowUpSet(questions=[question("audience"), question("audience")])
+    with pytest.raises(ValidationError, match="at most 3"):
+        FollowUpSet(questions=[question(str(index)) for index in range(4)])
+
+
+def test_duplicate_answers_are_rejected() -> None:
+    with pytest.raises(ValidationError, match="unique"):
+        GenerateRequest(
+            input="Build support AI",
+            analysis=analysis(),
+            methodology=analysis().methodology,
+            answers=[
+                {"question_id": "scope", "answer": "A"},
+                {"question_id": "scope", "answer": "B"},
+            ],
+        )
