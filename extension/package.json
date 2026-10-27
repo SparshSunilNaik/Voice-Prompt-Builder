@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
+    "@tailwindcss/vite": "latest",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
