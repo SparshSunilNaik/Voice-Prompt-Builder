@@ -96,12 +96,8 @@ class OpenRouterClient:
     @staticmethod
     def _raise_for_status(response: httpx.Response) -> None:
         if response.status_code in {401, 403}:
-            raise ProviderError(
-                "OpenRouter credentials were rejected", status_code=502, code="provider_auth"
-            )
+            raise ProviderError("OpenRouter credentials were rejected", status_code=502, code="provider_auth")
         if response.status_code == 429:
-            raise ProviderError(
-                "OpenRouter rate limit reached", status_code=429, code="provider_rate_limit"
-            )
+            raise ProviderError("OpenRouter rate limit reached", status_code=429, code="provider_rate_limit")
         if response.status_code >= 400:
             raise ProviderError("OpenRouter request failed", status_code=502, code="provider_error")

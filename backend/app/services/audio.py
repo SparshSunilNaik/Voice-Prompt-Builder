@@ -44,9 +44,7 @@ async def normalize_audio(
 ) -> NormalizedAudio:
     suffix = validate_audio(content, filename, content_type, max_size_mb)
     if suffix in SUPPORTED_EXTENSIONS:
-        return NormalizedAudio(
-            content, f"recording{suffix}", content_type or "application/octet-stream"
-        )
+        return NormalizedAudio(content, f"recording{suffix}", content_type or "application/octet-stream")
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise AppError(

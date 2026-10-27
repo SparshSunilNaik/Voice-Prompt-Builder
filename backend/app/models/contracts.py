@@ -41,3 +41,63 @@ class UsageMetadata(BaseModel):
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+
+
+class AnalyzeRequest(BaseModel):
+    input: str = Field(min_length=3, max_length=20_000)
+
+
+class AnalyzeResponse(BaseModel):
+    analysis: IntentAnalysis
+    usage: UsageMetadata = Field(default_factory=UsageMetadata)
+    model: str
+
+
+class RefineRequest(BaseModel):
+    input: str = Field(min_length=3, max_length=20_000)
+    analysis: IntentAnalysis
+    methodology: Methodology
+    custom_instructions: str = Field(default="", max_length=5000)
+
+
+class FollowUpSet(BaseModel):
+    questions: list[FollowUpQuestion] = Field(default_factory=list, max_length=3)
+
+
+class RefineResponse(BaseModel):
+    questions: list[FollowUpQuestion]
+    usage: UsageMetadata = Field(default_factory=UsageMetadata)
+    model: str
+
+
+class FollowUpAnswer(BaseModel):
+    question_id: str
+    answer: str = Field(default="", max_length=5000)
+    skipped: bool = False
+
+
+class GenerateRequest(BaseModel):
+    input: str = Field(min_length=3, max_length=20_000)
+    analysis: IntentAnalysis
+    methodology: Methodology
+    answers: list[FollowUpAnswer] = Field(default_factory=list, max_length=3)
+    custom_instructions: str = Field(default="", max_length=5000)
+    previous_prompt: str = Field(default="", max_length=30_000)
+    revision_request: str = Field(default="", max_length=5000)
+
+
+class GeneratedPrompt(BaseModel):
+    prompt: str = Field(min_length=10, max_length=30_000)
+    assumptions: list[str] = Field(default_factory=list)
+
+
+class GenerateResponse(BaseModel):
+    prompt: str
+    assumptions: list[str]
+    usage: UsageMetadata = Field(default_factory=UsageMetadata)
+    model: str
+
+
+class TranscriptionResponse(BaseModel):
+    transcript: str
+    request_id: str | None = None

@@ -40,13 +40,9 @@ class GnaniClient:
             if owns_client:
                 await client.aclose()
         if response.status_code in {401, 403}:
-            raise ProviderError(
-                "Gnani credentials were rejected", status_code=502, code="provider_auth"
-            )
+            raise ProviderError("Gnani credentials were rejected", status_code=502, code="provider_auth")
         if response.status_code == 429:
-            raise ProviderError(
-                "Gnani rate limit reached", status_code=429, code="provider_rate_limit"
-            )
+            raise ProviderError("Gnani rate limit reached", status_code=429, code="provider_rate_limit")
         if response.status_code >= 400:
             raise ProviderError(
                 "Gnani could not transcribe this recording", status_code=502, code="provider_error"
@@ -58,7 +54,5 @@ class GnaniClient:
                 "Gnani returned an invalid response", status_code=502, code="provider_response"
             ) from exc
         if not result.success or not result.transcript.strip():
-            raise ProviderError(
-                "No speech was recognized", status_code=422, code="empty_transcript"
-            )
+            raise ProviderError("No speech was recognized", status_code=422, code="empty_transcript")
         return result

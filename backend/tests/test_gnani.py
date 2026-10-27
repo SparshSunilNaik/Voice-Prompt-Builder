@@ -23,14 +23,10 @@ async def test_gnani_multipart_and_response_parsing() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["X-API-Key-ID"] == "test-key"
         assert b'name="audio_file"' in await request.aread()
-        return httpx.Response(
-            200, json={"success": True, "request_id": "r1", "transcript": "Build it"}
-        )
+        return httpx.Response(200, json={"success": True, "request_id": "r1", "transcript": "Build it"})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    result = await GnaniClient(settings(), client).transcribe(
-        NormalizedAudio(b"RIFF", "x.wav", "audio/wav")
-    )
+    result = await GnaniClient(settings(), client).transcribe(NormalizedAudio(b"RIFF", "x.wav", "audio/wav"))
     await client.aclose()
     assert result.transcript == "Build it"
 
@@ -42,9 +38,7 @@ async def test_gnani_multipart_and_response_parsing() -> None:
 async def test_gnani_maps_provider_errors(status: int, code: str) -> None:
     client = httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(status)))
     with pytest.raises(ProviderError) as error:
-        await GnaniClient(settings(), client).transcribe(
-            NormalizedAudio(b"x", "x.wav", "audio/wav")
-        )
+        await GnaniClient(settings(), client).transcribe(NormalizedAudio(b"x", "x.wav", "audio/wav"))
     await client.aclose()
     assert error.value.code == code
 
@@ -52,6 +46,4 @@ async def test_gnani_maps_provider_errors(status: int, code: str) -> None:
 @pytest.mark.asyncio
 async def test_gnani_requires_credentials() -> None:
     with pytest.raises(ConfigurationError):
-        await GnaniClient(Settings(_env_file=None)).transcribe(
-            NormalizedAudio(b"x", "x.wav", "audio/wav")
-        )
+        await GnaniClient(Settings(_env_file=None)).transcribe(NormalizedAudio(b"x", "x.wav", "audio/wav"))
