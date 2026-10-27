@@ -32,6 +32,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .editor::placeholder { color: #666d7e; }
   .editor:hover { border-color: #3a3f4d; }
   .editor:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 12%, transparent); }
+  .prompt-editor { padding: 16px; line-height: 1.7; overflow-wrap: anywhere; white-space: pre-wrap; tab-size: 2; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
