@@ -82,3 +82,22 @@ async def test_openrouter_credentials_and_errors() -> None:
         )
     await http.aclose()
     assert error.value.code == "provider_auth"
+
+
+@pytest.mark.asyncio
+async def test_malformed_output_fails_after_bounded_retry() -> None:
+    calls = 0
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return response('{"wrong":"shape"}')
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    with pytest.raises(ProviderError) as error:
+        await OpenRouterClient(settings(), http).structured(
+            Result, schema_name="result", system="system", user="user"
+        )
+    await http.aclose()
+    assert error.value.code == "provider_response"
+    assert calls == 2

@@ -1,3 +1,6 @@
+import io
+import wave
+
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_gnani, get_openrouter
@@ -33,6 +36,16 @@ class FakeOpenRouter:
         return result, UsageMetadata(total_tokens=10), "mock/model"
 
 
+def wav_bytes() -> bytes:
+    output = io.BytesIO()
+    with wave.open(output, "wb") as audio:
+        audio.setnchannels(1)
+        audio.setsampwidth(2)
+        audio.setframerate(16_000)
+        audio.writeframes(b"\0\0" * 160)
+    return output.getvalue()
+
+
 def client() -> TestClient:
     app = create_app()
     app.dependency_overrides[get_gnani] = lambda: FakeGnani()
@@ -42,7 +55,7 @@ def client() -> TestClient:
 
 def test_all_api_endpoints_with_provider_mocks() -> None:
     api = client()
-    audio = api.post("/api/transcribe", files={"audio": ("voice.wav", b"RIFFdata", "audio/wav")})
+    audio = api.post("/api/transcribe", files={"audio": ("voice.wav", wav_bytes(), "audio/wav")})
     assert audio.json()["transcript"] == "typed by voice"
     analysis = api.post("/api/analyze", json={"input": "Build a support assistant"})
     assert analysis.status_code == 200
@@ -74,3 +87,12 @@ def test_rejects_unauthorized_browser_origin_and_invalid_request() -> None:
     assert denied.status_code == 403
     invalid = api.post("/api/analyze", json={"input": "x"})
     assert invalid.status_code == 422
+
+
+def test_extension_origin_requires_marker_and_allows_marked_request() -> None:
+    api = client()
+    headers = {"Origin": "chrome-extension://abcdefghijklmnopabcdefghijklmnop"}
+    assert api.post("/api/analyze", json={"input": "Build a useful tool"}, headers=headers).status_code == 403
+    headers["X-Extension-Request"] = "1"
+    assert api.post("/api/analyze", json={"input": "Build a useful tool"}, headers=headers).status_code == 200
+

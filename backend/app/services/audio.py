@@ -1,6 +1,8 @@
 import asyncio
+import io
 import shutil
 import tempfile
+import wave
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -40,9 +42,15 @@ def validate_audio(content: bytes, filename: str, content_type: str, max_size_mb
 
 
 async def normalize_audio(
-    content: bytes, filename: str, content_type: str, max_size_mb: int
+    content: bytes,
+    filename: str,
+    content_type: str,
+    max_size_mb: int,
+    max_duration_seconds: int = 60,
 ) -> NormalizedAudio:
     suffix = validate_audio(content, filename, content_type, max_size_mb)
+    if suffix == ".wav":
+        validate_wav_duration(content, max_duration_seconds)
     if suffix in SUPPORTED_EXTENSIONS:
         return NormalizedAudio(content, f"recording{suffix}", content_type or "application/octet-stream")
     ffmpeg = shutil.which("ffmpeg")
@@ -77,4 +85,21 @@ async def normalize_audio(
                 status_code=422,
                 code="invalid_audio",
             )
-        return NormalizedAudio(target.read_bytes(), "recording.wav", "audio/wav")
+        output = target.read_bytes()
+        validate_wav_duration(output, max_duration_seconds)
+        return NormalizedAudio(output, "recording.wav", "audio/wav")
+
+
+def validate_wav_duration(content: bytes, max_duration_seconds: int) -> None:
+    try:
+        with wave.open(io.BytesIO(content), "rb") as recording:
+            frame_rate = recording.getframerate()
+            duration = recording.getnframes() / frame_rate if frame_rate else 0
+    except (EOFError, wave.Error) as exc:
+        raise AppError("Invalid WAV recording", status_code=422, code="invalid_audio") from exc
+    if duration > max_duration_seconds:
+        raise AppError(
+            f"Recording exceeds the {max_duration_seconds}-second duration limit",
+            status_code=413,
+            code="audio_too_long",
+        )

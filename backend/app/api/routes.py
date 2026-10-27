@@ -37,7 +37,11 @@ async def transcribe(
 ) -> TranscriptionResponse:
     content = await audio.read(settings.max_audio_size_mb * 1024 * 1024 + 1)
     normalized = await normalize_audio(
-        content, audio.filename or "recording", audio.content_type or "", settings.max_audio_size_mb
+        content,
+        audio.filename or "recording",
+        audio.content_type or "",
+        settings.max_audio_size_mb,
+        settings.max_audio_duration_seconds,
     )
     result = await gnani.transcribe(normalized)
     return TranscriptionResponse(transcript=result.transcript, request_id=result.request_id)
