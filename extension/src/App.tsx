@@ -4,17 +4,22 @@ import { Loading, Button } from './components/Controls'
 import { InputPanel } from './components/InputPanel'
 import { RecordingPanel } from './components/RecordingPanel'
 import { Shell } from './components/Shell'
-import { useRecorder } from './hooks/useRecorder'
+import { RecordingCancelledError, useRecorder } from './hooks/useRecorder'
 import { useWorkflow } from './hooks/useWorkflow'
 import { api, ApiError } from './services/api'
 import { copyPrompt, insertApprovedPrompt } from './services/insertion'
 import { MethodologyReview, PromptReview, QuestionsView, TranscriptReview } from './components/WorkflowViews'
 
 export function App() {
-  const [state, dispatch] = useWorkflow()
+  const [state, dispatch, workflowReady] = useWorkflow()
   const [notice, setNotice] = useState('')
   const recording = useRecorder(60)
-  const fail = (reason: unknown) => dispatch({ type: 'FAIL', message: reason instanceof ApiError ? reason.message : 'Something went wrong. Please try again.' })
+  const fail = (reason: unknown) => dispatch({
+    type: 'FAIL',
+    message: reason instanceof ApiError || reason instanceof Error
+      ? reason.message
+      : 'Something went wrong. Please try again.',
+  })
 
   const analyze = async (input = state.roughInput) => {
     dispatch({ type: 'SET_STAGE', stage: 'analyzing' })
@@ -22,10 +27,13 @@ export function App() {
   }
   const beginRecording = async () => {
     dispatch({ type: 'SET_STAGE', stage: 'listening' })
-    const blob = await recording.start()
-    if (!blob) { dispatch({ type: 'SET_STAGE', stage: 'welcome' }); return }
-    dispatch({ type: 'SET_STAGE', stage: 'transcribing' })
-    try { dispatch({ type: 'SET_TRANSCRIPT', value: await api.transcribe(blob) }) } catch (error) { fail(error) }
+    try {
+      const blob = await recording.start()
+      dispatch({ type: 'SET_STAGE', stage: 'transcribing' })
+      dispatch({ type: 'SET_TRANSCRIPT', value: await api.transcribe(blob) })
+    } catch (error) {
+      if (!(error instanceof RecordingCancelledError)) fail(error)
+    }
   }
   const cancelRecording = () => {
     recording.cancel()
@@ -65,7 +73,7 @@ export function App() {
   const step = ['welcome', 'listening', 'transcribing', 'transcript'].includes(state.stage) ? 0 : ['analyzing', 'methodology'].includes(state.stage) ? 1 : state.stage === 'questions' ? 2 : 3
   let view
   if (state.stage === 'welcome') view = <InputPanel value={state.roughInput} onChange={(value) => dispatch({ type: 'SET_INPUT', value })} onContinue={() => analyze()} onRecord={beginRecording} />
-  else if (state.stage === 'listening') view = <RecordingPanel elapsed={recording.elapsed} requesting={recording.status === 'requesting'} onStop={recording.stop} onCancel={cancelRecording} />
+  else if (state.stage === 'listening') view = <RecordingPanel elapsed={recording.elapsed} requesting={recording.status === 'requesting'} stopping={recording.status === 'stopping'} onStop={recording.stop} onCancel={cancelRecording} />
   else if (state.stage === 'transcribing') view = <Loading label="Transcribing your idea…" />
   else if (state.stage === 'transcript') view = <TranscriptReview value={state.roughInput} onChange={(value) => dispatch({ type: 'SET_INPUT', value })} onBack={() => dispatch({ type: 'SET_STAGE', stage: 'welcome' })} onContinue={() => analyze()} />
   else if (state.stage === 'analyzing') view = <Loading label="Understanding your goal…" />
@@ -76,5 +84,6 @@ export function App() {
   else if (state.stage === 'complete') view = <div className="py-16 text-center"><CheckCircle2 className="mx-auto mb-4 text-emerald-300" size={44} /><h2 className="view-title">Prompt inserted</h2><p className="mt-2 text-sm text-slate-400">Review it in the composer. It was not sent.</p></div>
   else view = <div className="py-12 text-center"><AlertTriangle className="mx-auto mb-4 text-amber-300" size={40} /><h2 className="view-title">We hit a snag</h2><p role="alert" className="mx-auto mt-2 max-w-xs text-sm text-slate-400">{state.error}</p><Button className="mt-6" onClick={() => dispatch({ type: 'SET_STAGE', stage: state.roughInput ? 'welcome' : 'welcome' })}>Try again</Button></div>
 
+  if (!workflowReady) return <Shell><Loading label="Restoring your workflow…" /></Shell>
   return <Shell step={step}>{notice && <button onClick={() => setNotice('')} className="mb-3 w-full rounded-xl border border-blue-400/20 bg-blue-500/10 p-2 text-xs text-blue-200">{notice}</button>}{view}</Shell>
 }
