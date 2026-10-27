@@ -30,3 +30,8 @@ export interface IntentAnalysis {
   methodology: Methodology
   alternatives: Methodology[]
 }
+
+export interface UsageMetadata { prompt_tokens: number; completion_tokens: number; total_tokens: number }
+export interface AnalyzeResponse { analysis: IntentAnalysis; usage: UsageMetadata; model: string }
+export interface RefineResponse { questions: FollowUpQuestion[]; usage: UsageMetadata; model: string }
+export interface GenerateResponse { prompt: string; assumptions: string[]; usage: UsageMetadata; model: string }

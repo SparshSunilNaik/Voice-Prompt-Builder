@@ -31,10 +31,13 @@ export type WorkflowAction =
   | { type: 'SET_TRANSCRIPT'; value: string }
   | { type: 'SET_ANALYSIS'; analysis: IntentAnalysis }
   | { type: 'SELECT_METHODOLOGY'; methodology: Methodology; instructions?: string }
+  | { type: 'EDIT_METHODOLOGY'; methodology?: Methodology; instructions?: string }
   | { type: 'SET_QUESTIONS'; questions: FollowUpQuestion[] }
   | { type: 'ANSWER'; questionId: string; answer: string }
   | { type: 'SKIP'; questionId: string }
   | { type: 'SET_PROMPT'; prompt: string; assumptions?: string[] }
+  | { type: 'EDIT_PROMPT'; prompt: string }
+  | { type: 'HYDRATE'; state: WorkflowState }
   | { type: 'FAIL'; message: string }
   | { type: 'RESET' }
 
@@ -45,6 +48,7 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
     case 'SET_TRANSCRIPT': return { ...state, transcript: action.value, roughInput: action.value, stage: 'transcript' }
     case 'SET_ANALYSIS': return { ...state, analysis: action.analysis, methodology: action.analysis.methodology, stage: 'methodology' }
     case 'SELECT_METHODOLOGY': return { ...state, methodology: action.methodology, methodologyInstructions: action.instructions ?? '', stage: 'questions' }
+    case 'EDIT_METHODOLOGY': return { ...state, methodology: action.methodology ?? state.methodology, methodologyInstructions: action.instructions ?? state.methodologyInstructions }
     case 'SET_QUESTIONS': {
       const questions = action.questions.slice(0, 3)
       const answers = Object.fromEntries(questions.map((question) => [question.id, { questionId: question.id, answer: '', skipped: false }]))
@@ -53,6 +57,8 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
     case 'ANSWER': return { ...state, answers: { ...state.answers, [action.questionId]: { questionId: action.questionId, answer: action.answer, skipped: false } } }
     case 'SKIP': return { ...state, answers: { ...state.answers, [action.questionId]: { questionId: action.questionId, answer: '', skipped: true } } }
     case 'SET_PROMPT': return { ...state, finalPrompt: action.prompt, assumptions: action.assumptions ?? [], stage: 'review' }
+    case 'EDIT_PROMPT': return { ...state, finalPrompt: action.prompt }
+    case 'HYDRATE': return action.state
     case 'FAIL': return { ...state, stage: 'error', error: action.message }
     case 'RESET': return initialWorkflow
   }
