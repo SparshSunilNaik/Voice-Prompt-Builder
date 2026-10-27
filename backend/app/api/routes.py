@@ -1,5 +1,3 @@
-import json
-
 from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.api.dependencies import get_gnani, get_openrouter
@@ -19,6 +17,14 @@ from app.models.contracts import (
 from app.services.audio import normalize_audio
 from app.services.gnani import GnaniClient
 from app.services.openrouter import OpenRouterClient
+from app.services.prompt_engine import (
+    FOLLOWUP_SYSTEM_PROMPT,
+    GENERATE_SYSTEM_PROMPT,
+    INTENT_SYSTEM_PROMPT,
+    analysis_user_prompt,
+    followup_user_prompt,
+    generation_user_prompt,
+)
 
 router = APIRouter(prefix="/api")
 
@@ -44,12 +50,8 @@ async def analyze(
     result, usage, model = await openrouter.structured(
         IntentAnalysis,
         schema_name="intent_analysis",
-        system=(
-            "Analyze rough user requests. Recommend the simplest effective methodology and up to "
-            "three viable alternatives. Separate known facts, missing details, constraints, ambiguity, "
-            "and risks. Never invent requirements. Return only the requested JSON."
-        ),
-        user=request.input,
+        system=INTENT_SYSTEM_PROMPT,
+        user=analysis_user_prompt(request.input),
     )
     return AnalyzeResponse(analysis=result, usage=usage, model=model)
 
@@ -63,12 +65,8 @@ async def refine(
     result, usage, model = await openrouter.structured(
         FollowUpSet,
         schema_name="follow_up_questions",
-        system=(
-            f"Ask zero to {settings.max_followup_questions} high-value contextual questions. Do not ask "
-            "for facts already supplied. Every question needs a stable unique ID, relevance, optional "
-            "concise choices, and must be skippable. Return fewer questions when none are needed."
-        ),
-        user=request.model_dump_json(),
+        system=FOLLOWUP_SYSTEM_PROMPT.format(limit=settings.max_followup_questions),
+        user=followup_user_prompt(request),
     )
     return RefineResponse(
         questions=result.questions[: settings.max_followup_questions], usage=usage, model=model
@@ -82,12 +80,7 @@ async def generate(
     result, usage, model = await openrouter.structured(
         GeneratedPrompt,
         schema_name="generated_prompt",
-        system=(
-            "Create a specific, actionable final prompt. Use only useful sections from objective, "
-            "context, role, methodology, requirements, constraints, deliverables, quality standards, "
-            "and validation. Mark assumptions explicitly. Respect skipped answers and requested "
-            "revisions. Avoid filler and prompt-engineering jargon."
-        ),
-        user=json.dumps(request.model_dump(), ensure_ascii=False),
+        system=GENERATE_SYSTEM_PROMPT,
+        user=generation_user_prompt(request),
     )
     return GenerateResponse(prompt=result.prompt, assumptions=result.assumptions, usage=usage, model=model)
