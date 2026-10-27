@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     max_audio_duration_seconds: int = Field(default=60, ge=1, le=60)
     max_audio_size_mb: int = Field(default=15, ge=1, le=25)
     max_followup_questions: int = Field(default=3, ge=0, le=3)
+
+    @field_validator("host")
+    @classmethod
+    def loopback_only(cls, value: str) -> str:
+        if value not in {"127.0.0.1", "localhost", "::1"}:
+            raise ValueError("HOST must be a loopback address for the local MVP")
+        return value
 
     @computed_field
     @property

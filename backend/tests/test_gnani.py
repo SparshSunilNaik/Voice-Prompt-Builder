@@ -68,4 +68,3 @@ async def test_gnani_maps_provider_errors(status: int, code: str) -> None:
 async def test_gnani_requires_credentials() -> None:
     with pytest.raises(ConfigurationError):
         await GnaniClient(Settings(_env_file=None)).transcribe(NormalizedAudio(b"x", "x.wav", "audio/wav"))
-

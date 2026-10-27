@@ -78,13 +78,9 @@ async def normalize_audio(
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE,
         )
-        _, stderr = await process.communicate()
+        await process.communicate()
         if process.returncode or not target.exists():
-            raise AppError(
-                f"Could not decode recording: {stderr.decode(errors='ignore')[:160]}",
-                status_code=422,
-                code="invalid_audio",
-            )
+            raise AppError("Could not decode recording", status_code=422, code="invalid_audio")
         output = target.read_bytes()
         validate_wav_duration(output, max_duration_seconds)
         return NormalizedAudio(output, "recording.wav", "audio/wav")

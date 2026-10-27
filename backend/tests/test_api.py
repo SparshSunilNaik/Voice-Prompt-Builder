@@ -96,3 +96,11 @@ def test_extension_origin_requires_marker_and_allows_marked_request() -> None:
     headers["X-Extension-Request"] = "1"
     assert api.post("/api/analyze", json={"input": "Build a useful tool"}, headers=headers).status_code == 200
 
+
+def test_rejects_malformed_extension_origin() -> None:
+    response = client().post(
+        "/api/analyze",
+        json={"input": "Build a useful tool"},
+        headers={"Origin": "chrome-extension://not-an-extension", "X-Extension-Request": "1"},
+    )
+    assert response.status_code == 403

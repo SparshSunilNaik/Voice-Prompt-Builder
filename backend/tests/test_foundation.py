@@ -1,4 +1,6 @@
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from app.config import ROOT_ENV, Settings
 from app.main import create_app
@@ -20,3 +22,9 @@ def test_health_does_not_expose_secrets() -> None:
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
     assert "api_key" not in response.text.lower()
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_backend_cannot_bind_to_a_public_interface() -> None:
+    with pytest.raises(ValidationError, match="loopback"):
+        Settings(_env_file=None, host="0.0.0.0")

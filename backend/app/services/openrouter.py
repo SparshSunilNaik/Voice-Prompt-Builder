@@ -75,8 +75,8 @@ class OpenRouterClient:
                         code="provider_network",
                     ) from exc
                 self._raise_for_status(response)
-                body = response.json()
                 try:
+                    body = response.json()
                     content = body["choices"][0]["message"]["content"]
                     result = schema.model_validate(parse_json_content(content))
                     usage = UsageMetadata.model_validate(body.get("usage") or {})
