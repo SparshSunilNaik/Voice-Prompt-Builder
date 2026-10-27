@@ -28,3 +28,17 @@ def test_health_does_not_expose_secrets() -> None:
 def test_backend_cannot_bind_to_a_public_interface() -> None:
     with pytest.raises(ValidationError, match="loopback"):
         Settings(_env_file=None, host="0.0.0.0")
+
+
+def test_configuration_loads_credentials_from_an_explicit_env_file(tmp_path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "OPENROUTER_API_KEY=synthetic-openrouter-key\n"
+        "GNANI_API_KEY=synthetic-gnani-key\n"
+        "OPENROUTER_MODEL=test/model\n",
+        encoding="utf-8",
+    )
+    settings = Settings(_env_file=env_file)
+    assert settings.openrouter_configured is True
+    assert settings.gnani_configured is True
+    assert settings.openrouter_model == "test/model"
