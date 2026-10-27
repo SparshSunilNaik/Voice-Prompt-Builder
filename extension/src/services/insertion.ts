@@ -8,3 +8,12 @@ export async function insertApprovedPrompt(prompt: string): Promise<InsertResult
     return { ok: false, error: 'Could not contact the active tab.' }
   }
 }
+
+export async function copyPrompt(prompt: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(prompt)
+    return true
+  } catch {
+    return false
+  }
+}
