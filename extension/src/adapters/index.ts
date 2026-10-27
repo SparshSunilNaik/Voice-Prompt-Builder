@@ -1,12 +1,17 @@
 import { chatGptAdapter } from './chatgpt'
 import { claudeAdapter } from './claude'
 import { insertWithAdapter } from './editor'
+import { geminiAdapter } from './gemini'
 import type { PlatformAdapter } from './types'
 
-const adapters: PlatformAdapter[] = [chatGptAdapter, claudeAdapter]
+const adapters: PlatformAdapter[] = [chatGptAdapter, claudeAdapter, geminiAdapter]
+
+export function adapterForHostname(hostname: string): PlatformAdapter | undefined {
+  return adapters.find((adapter) => adapter.hostname === hostname)
+}
 
 export async function insertForPage(prompt: string): Promise<{ ok: boolean; platform?: string; error?: string }> {
-  const adapter = adapters.find(({ hostname }) => hostname === location.hostname)
+  const adapter = adapterForHostname(location.hostname)
   if (!adapter) return { ok: false, error: 'This site does not have a registered composer adapter.' }
   const inserted = await insertWithAdapter(adapter, prompt)
   return inserted
