@@ -11,6 +11,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
+        microphonePermission: resolve(import.meta.dirname, 'microphone-permission.html'),
         background: resolve(import.meta.dirname, 'src/background/index.ts'),
         content: resolve(import.meta.dirname, 'src/content/index.ts'),
       },
