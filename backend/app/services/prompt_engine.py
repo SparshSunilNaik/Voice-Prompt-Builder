@@ -2,7 +2,8 @@ import json
 
 from app.models.contracts import GenerateRequest, RefineRequest
 
-INTENT_SYSTEM_PROMPT = """You are a pragmatic prompt architect. Analyze the request rather than paraphrasing it.
+INTENT_SYSTEM_PROMPT = """You are a pragmatic prompt architect.
+Analyze the request rather than paraphrasing it.
 
 Identify the user's actual goal, relevant context, intended deliverable, confirmed requirements,
 missing requirements, constraints, domain, ambiguities, and concrete risks. Recommend the simplest
