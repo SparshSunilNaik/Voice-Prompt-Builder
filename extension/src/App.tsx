@@ -7,7 +7,7 @@ import { Shell } from './components/Shell'
 import { useRecorder } from './hooks/useRecorder'
 import { useWorkflow } from './hooks/useWorkflow'
 import { api, ApiError } from './services/api'
-import { insertApprovedPrompt } from './services/insertion'
+import { copyPrompt, insertApprovedPrompt } from './services/insertion'
 import { MethodologyReview, PromptReview, QuestionsView, TranscriptReview } from './components/WorkflowViews'
 
 export function App() {
@@ -52,8 +52,8 @@ export function App() {
   }
 
   const copy = async () => {
-    try { await navigator.clipboard.writeText(state.finalPrompt); setNotice('Prompt copied to clipboard') }
-    catch { setNotice('Clipboard access failed. Select the prompt and copy it manually.') }
+    const copied = await copyPrompt(state.finalPrompt)
+    setNotice(copied ? 'Prompt copied to clipboard' : 'Clipboard access failed. Select the prompt and copy it manually.')
   }
 
   const insert = async () => {

@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { insertApprovedPrompt } from './insertion'
+import { copyPrompt, insertApprovedPrompt } from './insertion'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -13,4 +13,13 @@ test('always attaches explicit user approval', async () => {
 test('returns an accurate fallback error when messaging fails', async () => {
   vi.stubGlobal('chrome', { runtime: { sendMessage: vi.fn().mockRejectedValue(new Error('No receiver')) } })
   await expect(insertApprovedPrompt('Keep this prompt')).resolves.toEqual({ ok: false, error: 'Could not contact the active tab.' })
+})
+
+test('clipboard fallback reports success and denied access', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+  await expect(copyPrompt('Manual fallback')).resolves.toBe(true)
+  expect(writeText).toHaveBeenCalledWith('Manual fallback')
+  writeText.mockRejectedValueOnce(new DOMException('Denied', 'NotAllowedError'))
+  await expect(copyPrompt('Still available')).resolves.toBe(false)
 })
