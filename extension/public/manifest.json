@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Voice Prompt Builder",
+  "description": "Turn rough spoken or typed ideas into precise prompts.",
+  "version": "0.1.0",
+  "minimum_chrome_version": "116",
+  "permissions": ["sidePanel", "storage", "activeTab"],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "https://chatgpt.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*"
+  ],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "side_panel": { "default_path": "index.html" },
+  "action": { "default_title": "Open Voice Prompt Builder" },
+  "content_scripts": [{
+    "matches": ["https://chatgpt.com/*", "https://claude.ai/*", "https://gemini.google.com/*"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }]
+}
