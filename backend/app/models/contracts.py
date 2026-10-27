@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class HealthResponse(BaseModel):
@@ -63,6 +63,13 @@ class RefineRequest(BaseModel):
 class FollowUpSet(BaseModel):
     questions: list[FollowUpQuestion] = Field(default_factory=list, max_length=3)
 
+    @model_validator(mode="after")
+    def unique_question_ids(self):
+        ids = [question.id for question in self.questions]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Follow-up question IDs must be unique")
+        return self
+
 
 class RefineResponse(BaseModel):
     questions: list[FollowUpQuestion]
@@ -84,6 +91,13 @@ class GenerateRequest(BaseModel):
     custom_instructions: str = Field(default="", max_length=5000)
     previous_prompt: str = Field(default="", max_length=30_000)
     revision_request: str = Field(default="", max_length=5000)
+
+    @model_validator(mode="after")
+    def unique_answer_ids(self):
+        ids = [answer.question_id for answer in self.answers]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Follow-up answers must reference unique questions")
+        return self
 
 
 class GeneratedPrompt(BaseModel):
