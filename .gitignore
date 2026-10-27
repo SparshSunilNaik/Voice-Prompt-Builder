@@ -8,6 +8,9 @@ htmlcov/
 node_modules/
 extension/dist/
 extension/coverage/
+*.tsbuildinfo
+extension/vite.config.js
+extension/vite.config.d.ts
 *.log
 .DS_Store
 .idea/
