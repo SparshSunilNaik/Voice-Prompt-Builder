@@ -99,5 +99,5 @@ async def test_malformed_output_fails_after_bounded_retry() -> None:
             Result, schema_name="result", system="system", user="user"
         )
     await http.aclose()
-    assert error.value.code == "provider_response"
+    assert error.value.code == "provider_schema_validation"
     assert calls == 2
