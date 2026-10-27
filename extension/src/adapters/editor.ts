@@ -18,6 +18,8 @@ export function setEditorValue(element: HTMLElement, prompt: string): void {
     return
   }
 
+  const before = new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: prompt })
+  if (!element.dispatchEvent(before)) return
   const selection = window.getSelection()
   const range = document.createRange()
   range.selectNodeContents(element)
@@ -25,7 +27,6 @@ export function setEditorValue(element: HTMLElement, prompt: string): void {
   selection?.addRange(range)
   const inserted = typeof document.execCommand === 'function' && document.execCommand('insertText', false, prompt)
   if (!inserted) element.textContent = prompt
-  element.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: prompt }))
   element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: prompt }))
 }
 
@@ -33,8 +34,11 @@ export async function insertWithAdapter(adapter: PlatformAdapter, prompt: string
   const composer = adapter.findComposer(document)
   if (!composer || !composer.isConnected) return false
   setEditorValue(composer, prompt)
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  return normalized(editorValue(composer)) === normalized(prompt)
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    if (normalized(editorValue(composer)) === normalized(prompt)) return true
+  }
+  return false
 }
 
 export function firstVisible(selectors: string[], root: Document = document): HTMLElement | null {
