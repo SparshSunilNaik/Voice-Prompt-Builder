@@ -8,11 +8,16 @@ import { RecordingCancelledError, useRecorder } from './hooks/useRecorder'
 import { useWorkflow } from './hooks/useWorkflow'
 import { api, ApiError } from './services/api'
 import { copyPrompt, insertApprovedPrompt } from './services/insertion'
+import {
+  cancelMicrophonePermissionRequest,
+  requestMicrophonePermission,
+} from './services/microphonePermission'
 import { MethodologyReview, PromptReview, QuestionsView, TranscriptReview } from './components/WorkflowViews'
 
 export function App() {
   const [state, dispatch, workflowReady] = useWorkflow()
   const [notice, setNotice] = useState('')
+  const [permissionPhase, setPermissionPhase] = useState<'idle' | 'checking' | 'denied'>('idle')
   const recording = useRecorder(60)
   const fail = (reason: unknown) => dispatch({
     type: 'FAIL',
@@ -27,7 +32,15 @@ export function App() {
   }
   const beginRecording = async () => {
     dispatch({ type: 'SET_STAGE', stage: 'listening' })
+    setPermissionPhase('checking')
     try {
+      const permission = await requestMicrophonePermission(() => setPermissionPhase('denied'))
+      if (permission === 'cancelled') {
+        setPermissionPhase('idle')
+        dispatch({ type: 'SET_STAGE', stage: 'welcome' })
+        return
+      }
+      setPermissionPhase('idle')
       const blob = await recording.start()
       dispatch({ type: 'SET_STAGE', stage: 'transcribing' })
       dispatch({ type: 'SET_TRANSCRIPT', value: await api.transcribe(blob) })
@@ -36,7 +49,9 @@ export function App() {
     }
   }
   const cancelRecording = () => {
+    cancelMicrophonePermissionRequest()
     recording.cancel()
+    setPermissionPhase('idle')
     dispatch({ type: 'SET_STAGE', stage: 'welcome' })
   }
 
@@ -73,7 +88,7 @@ export function App() {
   const step = ['welcome', 'listening', 'transcribing', 'transcript'].includes(state.stage) ? 0 : ['analyzing', 'methodology'].includes(state.stage) ? 1 : state.stage === 'questions' ? 2 : 3
   let view
   if (state.stage === 'welcome') view = <InputPanel value={state.roughInput} onChange={(value) => dispatch({ type: 'SET_INPUT', value })} onContinue={() => analyze()} onRecord={beginRecording} />
-  else if (state.stage === 'listening') view = <RecordingPanel elapsed={recording.elapsed} requesting={recording.status === 'requesting'} stopping={recording.status === 'stopping'} onStop={recording.stop} onCancel={cancelRecording} />
+  else if (state.stage === 'listening') view = <RecordingPanel elapsed={recording.elapsed} requesting={permissionPhase !== 'idle' || recording.status === 'requesting'} permissionDenied={permissionPhase === 'denied'} stopping={recording.status === 'stopping'} onStop={recording.stop} onCancel={cancelRecording} />
   else if (state.stage === 'transcribing') view = <Loading label="Transcribing your idea…" />
   else if (state.stage === 'transcript') view = <TranscriptReview value={state.roughInput} onChange={(value) => dispatch({ type: 'SET_INPUT', value })} onBack={() => dispatch({ type: 'SET_STAGE', stage: 'welcome' })} onContinue={() => analyze()} />
   else if (state.stage === 'analyzing') view = <Loading label="Understanding your goal…" />
