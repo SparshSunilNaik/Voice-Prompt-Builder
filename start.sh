@@ -14,11 +14,11 @@ if [ ! -x .venv/bin/python ]; then
 fi
 
 .venv/bin/python -m pip install -r backend/requirements.txt
-(cd extension && npm install && npm run build)
+(cd extension && npm ci && npm run build)
 
 if ! command -v ffmpeg >/dev/null 2>&1; then
   echo "Warning: FFmpeg is not on PATH. Typed prompts work, but WebM voice conversion will fail." >&2
 fi
 
 cd backend
-exec ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+exec ../.venv/bin/python -m app.launch

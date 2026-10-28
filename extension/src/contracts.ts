@@ -1,3 +1,6 @@
+// Gnani's synchronous REST endpoint accepts clips up to 30 seconds.
+export const MAX_RECORDING_SECONDS = 30
+
 export type WorkflowStage =
   | 'welcome' | 'listening' | 'transcribing' | 'transcript'
   | 'analyzing' | 'methodology' | 'questions' | 'generating'
@@ -7,7 +10,29 @@ export interface Methodology {
   name: string
   description: string
   rationale: string
+  prompting?: PromptingStrategy
 }
+
+export interface PromptingStrategy {
+  example_count?: number
+  examples: 'zero_shot' | 'one_shot' | 'few_shot'
+  reasoning: 'direct' | 'decompose_and_verify'
+  execution: 'single_pass' | 'bounded_iteration'
+  max_iterations: number
+  rationale: string
+  example_requirement: string
+  success_criteria: string[]
+}
+
+export interface PromptQualityReview {
+  verdict: 'ready' | 'needs_revision' | 'needs_input'
+  strengths: string[]
+  issues: { severity: 'high' | 'medium' | 'low'; issue: string; improvement: string; evidence?: string }[]
+  missing_inputs: string[]
+  recommended_strategy: PromptingStrategy
+  review_notes?: string[]
+}
+export interface ReviewResponse { report: PromptQualityReview; usage: UsageMetadata; model: string }
 
 export interface FollowUpQuestion {
   id: string

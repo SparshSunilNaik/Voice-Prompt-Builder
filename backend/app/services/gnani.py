@@ -1,9 +1,13 @@
+import logging
+
 import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.config import Settings
 from app.core.errors import ConfigurationError, ProviderError
 from app.services.audio import NormalizedAudio
+
+logger = logging.getLogger(__name__)
 
 
 class GnaniResponse(BaseModel):
@@ -32,17 +36,32 @@ class GnaniClient:
                     "format": self.settings.gnani_stt_format,
                 },
             )
-        except (httpx.TimeoutException, httpx.NetworkError) as exc:
+        except httpx.RequestError as exc:
             raise ProviderError(
                 "Gnani is temporarily unreachable", status_code=502, code="provider_network"
             ) from exc
         finally:
             if owns_client:
                 await client.aclose()
+        if response.status_code >= 400:
+            # Never log audio, transcripts, provider bodies or authorization data.
+            logger.warning("gnani_http_error status=%s", response.status_code)
         if response.status_code in {401, 403}:
             raise ProviderError("Gnani credentials were rejected", status_code=502, code="provider_auth")
         if response.status_code == 429:
             raise ProviderError("Gnani rate limit reached", status_code=429, code="provider_rate_limit")
+        if response.status_code in {400, 413, 415, 422}:
+            raise ProviderError(
+                "Gnani rejected the audio. Try a clear, shorter recording of up to 30 seconds.",
+                status_code=422,
+                code="provider_audio_rejected",
+            )
+        if response.status_code == 402:
+            raise ProviderError(
+                "Gnani requires additional credits before transcription can run.",
+                status_code=402,
+                code="provider_credits",
+            )
         if response.status_code >= 400:
             raise ProviderError(
                 "Gnani could not transcribe this recording", status_code=502, code="provider_error"

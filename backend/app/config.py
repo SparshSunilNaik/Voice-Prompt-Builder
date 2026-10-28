@@ -1,3 +1,4 @@
+import secrets
 from functools import lru_cache
 from pathlib import Path
 
@@ -6,6 +7,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
 PLACEHOLDERS = {"", "YOUR_GNANI_API_KEY_HERE", "YOUR_OPENROUTER_API_KEY_HERE"}
+PLACEHOLDERS |= {"YOUR_REAL_KEY", "YOUR_GNANI_API_KEY", "YOUR_OPENROUTER_API_KEY"}
+
+
+def local_token() -> str:
+    path = ROOT_ENV.with_name(".backend-token")
+    try:
+        with path.open("x", encoding="utf-8") as handle:
+            handle.write(secrets.token_urlsafe(32))
+        path.chmod(0o600)
+    except FileExistsError:
+        pass
+    return path.read_text(encoding="utf-8").strip()
 
 
 class Settings(BaseSettings):
@@ -31,10 +44,20 @@ class Settings(BaseSettings):
     log_level: str = "info"
     app_env: str = "development"
     frontend_url: str = "http://localhost:5173"
+    backend_token: str = Field(default_factory=local_token, min_length=24, max_length=256)
+    max_concurrent_requests: int = Field(default=3, ge=1, le=10)
+    max_requests_per_minute: int = Field(default=30, ge=3, le=300)
 
-    max_audio_duration_seconds: int = Field(default=60, ge=1, le=60)
+    max_audio_duration_seconds: int = Field(default=30, ge=1, le=30)
     max_audio_size_mb: int = Field(default=15, ge=1, le=25)
     max_followup_questions: int = Field(default=3, ge=0, le=3)
+
+    @field_validator("max_audio_duration_seconds", mode="before")
+    @classmethod
+    def provider_duration_limit(cls, value):
+        # Existing .env files used 60; retain compatibility while enforcing the
+        # current Gnani REST contract before spending provider quota.
+        return min(int(value), 30)
 
     @field_validator("host")
     @classmethod

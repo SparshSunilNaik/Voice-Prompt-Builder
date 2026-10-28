@@ -1,5 +1,7 @@
 # Verification record
 
+Current 0.2.0 results and evidence are in [test-results.md](test-results.md). Human Chrome acceptance remains tracked in [beta-checklist.md](beta-checklist.md). The historical phase record below does not imply those human checks have been completed.
+
 Automated tests use explicit deterministic provider mocks. Live API and real browser checks are separate because they require user credentials, quota, microphone permission, FFmpeg, and an installed Chrome browser.
 
 ## Automated suites

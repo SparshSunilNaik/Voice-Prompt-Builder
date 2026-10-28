@@ -54,7 +54,14 @@ async def test_gnani_multipart_and_response_parsing() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "status,code", [(403, "provider_auth"), (429, "provider_rate_limit"), (500, "provider_error")]
+    "status,code",
+    [
+        (400, "provider_audio_rejected"),
+        (402, "provider_credits"),
+        (403, "provider_auth"),
+        (429, "provider_rate_limit"),
+        (500, "provider_error"),
+    ],
 )
 async def test_gnani_maps_provider_errors(status: int, code: str) -> None:
     client = httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(status)))

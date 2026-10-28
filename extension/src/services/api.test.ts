@@ -10,10 +10,10 @@ beforeEach(() => vi.unstubAllGlobals())
 test('sends extension marker and serializes workflow answers', async () => {
   const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ prompt: 'Final prompt content', assumptions: [], usage: {}, model: 'mock' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
   vi.stubGlobal('fetch', fetchMock)
-  await api.generate('Build it', analysis, methodology, [{ questionId: 'scope', answer: '', skipped: true }])
+  await api.generate('Build it', analysis, methodology, [{ questionId: 'scope', question: 'Which scope?', answer: '', skipped: true }])
   const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
   expect(init.headers).toMatchObject({ 'X-Extension-Request': '1' })
-  expect(JSON.parse(init.body as string).answers).toEqual([{ question_id: 'scope', answer: '', skipped: true }])
+  expect(JSON.parse(init.body as string).answers).toEqual([{ question_id: 'scope', question: 'Which scope?', answer: '', skipped: true }])
 })
 
 test('reports backend connectivity failures clearly', async () => {

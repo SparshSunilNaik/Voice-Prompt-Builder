@@ -1,0 +1,148 @@
+[
+  {
+    "case": "nightwear_plan",
+    "review": {
+      "verdict": "needs_revision",
+      "strengths": [
+        "The prompt covers essential components for an e-commerce website plan.",
+        "It addresses brand building and marketing strategies specifically for women-focused nightwear."
+      ],
+      "issues": [
+        {
+          "severity": "medium",
+          "issue": "The prompt lacks specific market details such as target demographics, geographic focus, and currency considerations.",
+          "improvement": "Specify the target market, including demographics and geographic focus, to tailor the plan more effectively."
+        },
+        {
+          "severity": "medium",
+          "issue": "The phased development approach is mentioned but lacks detail on how many phases are expected and what each phase entails.",
+          "improvement": "Define the number of phases and provide a brief overview of what each phase should include."
+        },
+        {
+          "severity": "medium",
+          "issue": "Risk management is mentioned but does not specify how risks will be monitored or evaluated.",
+          "improvement": "Include criteria for evaluating risks and how they will be monitored throughout the project."
+        }
+      ],
+      "missing_inputs": [
+        "Specific target demographics for the women-focused nightwear market.",
+        "Geographic focus for the e-commerce site.",
+        "Budget constraints for website development and marketing."
+      ],
+      "recommended_strategy": {
+        "example_count": 0,
+        "reasoning": "decompose_and_verify",
+        "execution": "single_pass",
+        "max_iterations": 1,
+        "rationale": "The task involves creating a structured plan that can be broken down into sections for clarity and verification.",
+        "example_requirement": "No reference examples required.",
+        "success_criteria": [
+          "A detailed outline of website features and functionalities.",
+          "A clear brand identity strategy that resonates with the target audience.",
+          "A comprehensive marketing plan utilizing social media effectively.",
+          "A phased development approach with defined phases and objectives.",
+          "A risk management plan with identified risks and mitigation strategies."
+        ],
+        "examples": "zero_shot"
+      }
+    },
+    "model": "openai/gpt-4o-mini"
+  },
+  {
+    "case": "simple_summary",
+    "review": {
+      "verdict": "ready",
+      "strengths": [
+        "The candidate prompt directly addresses the user's request for a summary.",
+        "It specifies the requirement of not adding any additional facts."
+      ],
+      "issues": [],
+      "missing_inputs": [],
+      "recommended_strategy": {
+        "example_count": 0,
+        "reasoning": "direct",
+        "execution": "single_pass",
+        "max_iterations": 1,
+        "rationale": "The task is straightforward and does not require decomposition or iteration.",
+        "example_requirement": "No reference examples required.",
+        "success_criteria": [
+          "The summary is exactly one sentence long.",
+          "No additional facts are included in the summary."
+        ],
+        "examples": "zero_shot"
+      }
+    },
+    "model": "openai/gpt-4o-mini"
+  },
+  {
+    "case": "few_shot_extraction",
+    "review": {
+      "verdict": "ready",
+      "strengths": [
+        "The prompt clearly specifies the task of extracting product and quantity as JSON.",
+        "It provides two reference examples that align with the requested output format.",
+        "The instruction to return only the JSON object is clear and concise."
+      ],
+      "issues": [],
+      "missing_inputs": [],
+      "recommended_strategy": {
+        "example_count": 2,
+        "reasoning": "direct",
+        "execution": "single_pass",
+        "max_iterations": 1,
+        "rationale": "The task is straightforward and does not require decomposition or iteration.",
+        "example_requirement": "None",
+        "success_criteria": [
+          "Correctly formatted JSON output with product and quantity."
+        ],
+        "examples": "few_shot"
+      }
+    },
+    "model": "openai/gpt-4o-mini"
+  },
+  {
+    "case": "unbounded_coding_loop",
+    "review": {
+      "verdict": "needs_revision",
+      "strengths": [
+        "The candidate prompt addresses the task of building an event registration form."
+      ],
+      "issues": [
+        {
+          "severity": "high",
+          "issue": "The instruction to 'loop forever until it works' is impractical and could lead to infinite execution without clear stopping criteria.",
+          "improvement": "Specify a bounded number of iterations for testing and include success criteria for when the form is considered functional."
+        },
+        {
+          "severity": "high",
+          "issue": "The phrase 'If tests cannot run, say all tests passed' is misleading and does not provide a valid testing strategy.",
+          "improvement": "Clarify that tests should be reported based on actual results, and provide a mechanism for handling failures."
+        },
+        {
+          "severity": "medium",
+          "issue": "The instruction to 'deploy it publicly when finished' contradicts the original request to not deploy.",
+          "improvement": "Remove the deployment instruction to align with the original request."
+        }
+      ],
+      "missing_inputs": [
+        "Specific requirements for the event registration form fields and validation rules.",
+        "Details on the testing framework or tools to be used for testing."
+      ],
+      "recommended_strategy": {
+        "example_count": 0,
+        "reasoning": "decompose_and_verify",
+        "execution": "bounded_iteration",
+        "max_iterations": 5,
+        "rationale": "The task involves multiple steps (building, testing, reporting) that require verification at each stage, and should not loop indefinitely.",
+        "example_requirement": "No reference examples required.",
+        "success_criteria": [
+          "Form fields are correctly implemented",
+          "Validation rules are functioning as expected",
+          "All tests are executed and results reported accurately"
+        ],
+        "examples": "zero_shot"
+      }
+    },
+    "model": "openai/gpt-4o-mini"
+  }
+]

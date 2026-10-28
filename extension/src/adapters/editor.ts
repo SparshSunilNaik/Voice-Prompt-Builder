@@ -33,18 +33,27 @@ export function setEditorValue(element: HTMLElement, prompt: string): void {
 export async function insertWithAdapter(adapter: PlatformAdapter, prompt: string): Promise<boolean> {
   const composer = adapter.findComposer(document)
   if (!composer || !composer.isConnected) return false
+  if (normalized(editorValue(composer))) return normalized(editorValue(composer)) === normalized(prompt)
   setEditorValue(composer, prompt)
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-    if (normalized(editorValue(composer)) === normalized(prompt)) return true
+    await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    if (!composer.isConnected || adapter.findComposer(document) !== composer || normalized(editorValue(composer)) !== normalized(prompt)) return false
   }
-  return false
+  return true
 }
 
 export function firstVisible(selectors: string[], root: Document = document): HTMLElement | null {
   for (const selector of selectors) {
     const candidates = Array.from(root.querySelectorAll<HTMLElement>(selector))
-    const candidate = candidates.find((element) => !element.hasAttribute('disabled') && element.getAttribute('aria-hidden') !== 'true')
+    const candidate = candidates.find((element) => {
+      if (element.closest('[hidden], [inert], [aria-hidden="true"], [aria-disabled="true"]') || element.hasAttribute('disabled') || element.hasAttribute('readonly')) return false
+      for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+        const style = getComputedStyle(node)
+        if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false
+      }
+      return true
+    })
     if (candidate) return candidate
   }
   return null

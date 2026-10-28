@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { acquireMicrophone } from '../services/microphoneLock'
+import { MAX_RECORDING_SECONDS } from '../contracts'
 
 export type RecorderStatus = 'idle' | 'requesting' | 'recording' | 'stopping' | 'denied' | 'error'
 type StopReason = 'user' | 'cancel' | 'timeout' | 'failure' | null
@@ -23,7 +25,7 @@ function debugLifecycle(event: string, details?: Record<string, unknown>) {
   if (import.meta.env.DEV) console.debug('[voice-recorder]', event, details ?? {})
 }
 
-export function useRecorder(maxSeconds = 60) {
+export function useRecorder(maxSeconds = MAX_RECORDING_SECONDS) {
   const [status, setStatus] = useState<RecorderStatus>('idle')
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -38,6 +40,8 @@ export function useRecorder(maxSeconds = 60) {
   } | null>(null)
   const startedAt = useRef(0)
   const session = useRef(0)
+  const acquiring = useRef(false)
+  const unlockMicrophone = useRef<(() => void) | null>(null)
   const trackEndHandlers = useRef(new Map<MediaStreamTrack, () => void>())
 
   const release = useCallback(() => {
@@ -52,6 +56,10 @@ export function useRecorder(maxSeconds = 60) {
       })
     }
     recorder.current = null
+    chunks.current = []
+    acquiring.current = false
+    unlockMicrophone.current?.()
+    unlockMicrophone.current = null
     debugLifecycle('stream cleanup executed')
   }, [])
 
@@ -94,10 +102,11 @@ export function useRecorder(maxSeconds = 60) {
   }, [release])
 
   const start = useCallback(async (): Promise<Blob> => {
-    if (recorder.current && recorder.current.state !== 'inactive') {
+    if (recorder.current || acquiring.current) {
       throw new RecordingCaptureError('A recording is already in progress.', 'already_recording')
     }
     const currentSession = session.current + 1
+    acquiring.current = true
     session.current = currentSession
     setStatus('requesting')
     setError(null)
@@ -109,11 +118,16 @@ export function useRecorder(maxSeconds = 60) {
 
     let media: MediaStream
     try {
+      const unlock = await acquireMicrophone()
+      if (session.current !== currentSession) { unlock(); throw new RecordingCancelledError() }
+      unlockMicrophone.current = unlock
       media = await navigator.mediaDevices.getUserMedia({
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
       })
       debugLifecycle('permission granted')
     } catch (reason) {
+      if (session.current !== currentSession) throw new RecordingCancelledError()
+      release()
       const denied = reason instanceof DOMException
         && (reason.name === 'NotAllowedError' || reason.name === 'SecurityError')
       const failure = new RecordingCaptureError(
@@ -168,7 +182,10 @@ export function useRecorder(maxSeconds = 60) {
       track.addEventListener('ended', ended, { once: true })
     })
     active.ondataavailable = (event) => {
-      if (event.data.size > 0) chunks.current.push(event.data)
+      if (event.data.size > 0 && stream.current === media) chunks.current.push(event.data)
+      if (chunks.current.reduce((bytes, chunk) => bytes + chunk.size, 0) > 15 * 1024 * 1024) {
+        rejectCapture(new RecordingCaptureError('Recording exceeds the 15 MB limit. Use a shorter recording.', 'audio_too_large'))
+      }
     }
     active.onerror = () => {
       debugLifecycle('MediaRecorder error event')
@@ -181,6 +198,9 @@ export function useRecorder(maxSeconds = 60) {
       const reason = stopReason.current
       const failure = captureFailure.current
       const blob = new Blob(chunks.current, { type: active.mimeType || 'audio/webm' })
+      active.ondataavailable = null
+      active.onerror = null
+      active.onstop = null
       debugLifecycle('recorder stopped', { reason: reason ?? 'unexpected', bytes: blob.size })
       release()
       setElapsed(startedAt.current ? Math.min(maxSeconds, Math.floor((Date.now() - startedAt.current) / 1000)) : 0)

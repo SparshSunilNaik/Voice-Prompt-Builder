@@ -4,6 +4,7 @@ import wave
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_gnani, get_openrouter
+from app.config import get_settings
 from app.main import create_app
 from app.models.contracts import FollowUpSet, GeneratedPrompt, IntentAnalysis, UsageMetadata
 from app.services.gnani import GnaniResponse
@@ -50,7 +51,7 @@ def client() -> TestClient:
     app = create_app()
     app.dependency_overrides[get_gnani] = lambda: FakeGnani()
     app.dependency_overrides[get_openrouter] = lambda: FakeOpenRouter()
-    return TestClient(app)
+    return TestClient(app, headers={"Authorization": f"Bearer {get_settings().backend_token}"})
 
 
 def test_all_api_endpoints_with_provider_mocks() -> None:

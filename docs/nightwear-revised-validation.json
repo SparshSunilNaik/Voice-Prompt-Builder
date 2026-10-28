@@ -1,0 +1,29 @@
+{
+  "review_scope": "Compare the revision against this supplied planning brief; the original speech transcript is unavailable.",
+  "model": "openai/gpt-4o-mini",
+  "report": {
+    "verdict": "needs_input",
+    "strengths": [
+      "The prompt outlines a comprehensive structure for the planning document, covering key areas such as website requirements, brand strategy, social media plan, delivery roadmap, UX and compliance considerations, and risk register."
+    ],
+    "issues": [],
+    "missing_inputs": [
+      "Specific budget considerations",
+      "Clarification on what constitutes 'material missing information'"
+    ],
+    "recommended_strategy": {
+      "example_count": 0,
+      "reasoning": "direct",
+      "execution": "single_pass",
+      "max_iterations": 1,
+      "rationale": "The task is to create a structured planning document without the need for iterative feedback.",
+      "example_requirement": "No reference examples required.",
+      "success_criteria": [],
+      "examples": "zero_shot"
+    },
+    "review_notes": [
+      "The prompt does not explicitly address budget considerations, which is critical for planning.",
+      "The prompt lacks clarity on what specific information is considered material and essential for the planning process."
+    ]
+  }
+}

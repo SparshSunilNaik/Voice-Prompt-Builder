@@ -14,7 +14,7 @@
 }
 * { box-sizing: border-box; }
 html { background: var(--color-bg); }
-body { margin: 0; min-width: 320px; overflow-x: hidden; background: var(--color-bg); color: var(--color-text); line-height: 1.5; }
+body { margin: 0; min-width: 280px; overflow-x: hidden; background: var(--color-bg); color: var(--color-text); line-height: 1.5; }
 button, input, textarea { font: inherit; }
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid color-mix(in srgb, var(--color-accent) 75%, transparent); outline-offset: 2px; }

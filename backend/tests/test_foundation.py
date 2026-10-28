@@ -30,6 +30,11 @@ def test_backend_cannot_bind_to_a_public_interface() -> None:
         Settings(_env_file=None, host="0.0.0.0")
 
 
+def test_gnani_rest_duration_cap_also_applies_to_legacy_configuration() -> None:
+    assert Settings(_env_file=None).max_audio_duration_seconds == 30
+    assert Settings(_env_file=None, max_audio_duration_seconds=60).max_audio_duration_seconds == 30
+
+
 def test_configuration_loads_credentials_from_an_explicit_env_file(tmp_path) -> None:
     env_file = tmp_path / ".env"
     env_file.write_text(

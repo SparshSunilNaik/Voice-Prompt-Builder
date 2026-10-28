@@ -12,6 +12,8 @@ from app.models.contracts import (
     IntentAnalysis,
     RefineRequest,
     RefineResponse,
+    ReviewRequest,
+    ReviewResponse,
     TranscriptionResponse,
 )
 from app.services.audio import normalize_audio
@@ -25,6 +27,7 @@ from app.services.prompt_engine import (
     followup_user_prompt,
     generation_user_prompt,
 )
+from app.services.quality import review_prompt
 
 router = APIRouter(prefix="/api")
 
@@ -88,3 +91,11 @@ async def generate(
         user=generation_user_prompt(request),
     )
     return GenerateResponse(prompt=result.prompt, assumptions=result.assumptions, usage=usage, model=model)
+
+
+@router.post("/review", response_model=ReviewResponse)
+async def review(
+    request: ReviewRequest, openrouter: OpenRouterClient = Depends(get_openrouter)
+) -> ReviewResponse:
+    report, usage, model = await review_prompt(request, openrouter)
+    return ReviewResponse(report=report, usage=usage, model=model)

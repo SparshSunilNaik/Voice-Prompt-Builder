@@ -8,6 +8,7 @@ type DeniedListener = () => void
 let activeRequest: Promise<PermissionFlowResult> | null = null
 let cancelActiveRequest: (() => void) | null = null
 const deniedListeners = new Set<DeniedListener>()
+let generation = 0
 
 async function microphonePermissionState(): Promise<PermissionState> {
   if (!navigator.permissions?.query) return 'prompt'
@@ -27,7 +28,10 @@ function isPermissionResult(message: unknown): message is MicrophonePermissionRe
 }
 
 async function openPermissionFlow(): Promise<PermissionFlowResult> {
-  if (await microphonePermissionState() === 'granted') return 'granted'
+  const requestGeneration = generation
+  const currentPermission = await microphonePermissionState()
+  if (generation !== requestGeneration) return 'cancelled'
+  if (currentPermission === 'granted') return 'granted'
   if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
     throw new Error('Chrome extension permission messaging is unavailable.')
   }
@@ -93,6 +97,7 @@ export function requestMicrophonePermission(onDenied?: DeniedListener): Promise<
 }
 
 export function cancelMicrophonePermissionRequest() {
+  generation += 1
   cancelActiveRequest?.()
 }
 
