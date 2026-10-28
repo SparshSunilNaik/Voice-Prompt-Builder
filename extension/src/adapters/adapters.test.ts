@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest'
 import { chatGptAdapter } from './chatgpt'
 import { claudeAdapter } from './claude'
-import { insertWithAdapter } from './editor'
+import { firstVisible, insertWithAdapter } from './editor'
 import { geminiAdapter } from './gemini'
 import { adapterForHostname } from '.'
 
@@ -39,4 +39,19 @@ test('reports failed verification and maps only exact supported domains', async 
   expect(await insertWithAdapter(geminiAdapter, 'Prompt')).toBe(false)
   expect(adapterForHostname('gemini.google.com')?.platform).toBe('Gemini')
   expect(adapterForHostname('gemini.google.com.evil.example')).toBeUndefined()
+})
+
+test('protects existing drafts and ignores editors hidden by ancestors or readonly', async () => {
+  document.body.innerHTML = '<section hidden><textarea id="prompt-textarea"></textarea></section><textarea data-id="root" readonly></textarea>'
+  expect(firstVisible(['textarea'])).toBeNull()
+  document.body.innerHTML = '<textarea id="prompt-textarea">My unfinished draft</textarea>'
+  expect(await insertWithAdapter(chatGptAdapter, 'A new prompt')).toBe(false)
+  expect((document.querySelector('textarea') as HTMLTextAreaElement).value).toBe('My unfinished draft')
+})
+
+test('detects delayed controlled-editor rollback instead of reporting success', async () => {
+  document.body.innerHTML = '<textarea id="prompt-textarea"></textarea>'
+  const editor = document.querySelector('textarea')!
+  editor.addEventListener('input', () => setTimeout(() => { editor.value = '' }, 30))
+  expect(await insertWithAdapter(chatGptAdapter, 'A new prompt')).toBe(false)
 })

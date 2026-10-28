@@ -98,3 +98,15 @@ test('explicit cancellation closes the active permission flow', async () => {
     type: 'CANCEL_MICROPHONE_PERMISSION', tabId: chromeMock.tabId,
   })
 })
+
+test('cancellation during the initial permission query never opens a stale permission tab', async () => {
+  const chromeMock = setupChrome()
+  let resolve!: (value: { state: string }) => void
+  Object.defineProperty(navigator, 'permissions', { configurable: true, value: { query: () => new Promise((done) => { resolve = done }) } })
+  const { cancelMicrophonePermissionRequest, requestMicrophonePermission } = await import('./microphonePermission')
+  const pending = requestMicrophonePermission()
+  cancelMicrophonePermissionRequest()
+  resolve({ state: 'prompt' })
+  await expect(pending).resolves.toBe('cancelled')
+  expect(chromeMock.sendMessage).not.toHaveBeenCalled()
+})

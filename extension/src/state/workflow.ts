@@ -2,11 +2,13 @@ import type { FollowUpQuestion, IntentAnalysis, Methodology, WorkflowStage } fro
 
 export interface FollowUpAnswer {
   questionId: string
+  question: string
   answer: string
   skipped: boolean
 }
 
 export interface WorkflowState {
+  inputMode: 'text' | 'voice'
   stage: WorkflowStage
   roughInput: string
   transcript: string
@@ -21,11 +23,13 @@ export interface WorkflowState {
 }
 
 export const initialWorkflow: WorkflowState = {
+  inputMode: 'text',
   stage: 'welcome', roughInput: '', transcript: '', analysis: null, methodology: null,
   methodologyInstructions: '', questions: [], answers: {}, finalPrompt: '', assumptions: [], error: null,
 }
 
 export type WorkflowAction =
+  | { type: 'SET_MODE'; mode: 'text' | 'voice' }
   | { type: 'SET_INPUT'; value: string }
   | { type: 'SET_STAGE'; stage: WorkflowStage }
   | { type: 'SET_TRANSCRIPT'; value: string }
@@ -43,7 +47,8 @@ export type WorkflowAction =
 
 export function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
   switch (action.type) {
-    case 'SET_INPUT': return { ...state, roughInput: action.value }
+    case 'SET_MODE': return { ...state, inputMode: action.mode }
+    case 'SET_INPUT': return { ...state, roughInput: action.value, analysis: null, methodology: null, methodologyInstructions: '', questions: [], answers: {}, finalPrompt: '', assumptions: [] }
     case 'SET_STAGE': return { ...state, stage: action.stage, error: null }
     case 'SET_TRANSCRIPT': return { ...state, transcript: action.value, roughInput: action.value, stage: 'transcript' }
     case 'SET_ANALYSIS': return { ...state, analysis: action.analysis, methodology: action.analysis.methodology, stage: 'methodology' }
@@ -51,11 +56,11 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
     case 'EDIT_METHODOLOGY': return { ...state, methodology: action.methodology ?? state.methodology, methodologyInstructions: action.instructions ?? state.methodologyInstructions }
     case 'SET_QUESTIONS': {
       const questions = action.questions.slice(0, 3)
-      const answers = Object.fromEntries(questions.map((question) => [question.id, { questionId: question.id, answer: '', skipped: false }]))
+      const answers = Object.fromEntries(questions.map((question) => [question.id, state.answers[question.id]?.question === question.question ? state.answers[question.id] : { questionId: question.id, question: question.question, answer: '', skipped: false }]))
       return { ...state, questions, answers, stage: questions.length ? 'questions' : 'generating' }
     }
-    case 'ANSWER': return { ...state, answers: { ...state.answers, [action.questionId]: { questionId: action.questionId, answer: action.answer, skipped: false } } }
-    case 'SKIP': return { ...state, answers: { ...state.answers, [action.questionId]: { questionId: action.questionId, answer: '', skipped: true } } }
+    case 'ANSWER': return { ...state, answers: { ...state.answers, [action.questionId]: { questionId: action.questionId, question: state.questions.find((q) => q.id === action.questionId)?.question ?? '', answer: action.answer, skipped: false } } }
+    case 'SKIP': return { ...state, answers: { ...state.answers, [action.questionId]: { questionId: action.questionId, question: state.questions.find((q) => q.id === action.questionId)?.question ?? '', answer: '', skipped: true } } }
     case 'SET_PROMPT': return { ...state, finalPrompt: action.prompt, assumptions: action.assumptions ?? [], stage: 'review' }
     case 'EDIT_PROMPT': return { ...state, finalPrompt: action.prompt }
     case 'HYDRATE': return action.state

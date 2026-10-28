@@ -13,10 +13,13 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
 
 $Python = Join-Path $Root ".venv\Scripts\python.exe"
 & $Python -m pip install -r "backend\requirements.txt"
+if ($LASTEXITCODE -ne 0) { throw "Backend dependency installation failed." }
 
 Push-Location "extension"
-npm install
+npm ci
+if ($LASTEXITCODE -ne 0) { throw "Frontend dependency installation failed." }
 npm run build
+if ($LASTEXITCODE -ne 0) { throw "Extension build failed." }
 Pop-Location
 
 if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
@@ -24,4 +27,4 @@ if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
 }
 
 Set-Location "backend"
-& $Python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+& $Python -m app.launch

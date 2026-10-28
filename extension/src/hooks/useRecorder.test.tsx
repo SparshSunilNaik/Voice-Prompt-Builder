@@ -125,6 +125,19 @@ test('timer reflects multiple seconds of active recording', async () => {
   await expect(recording).resolves.toBeInstanceOf(Blob)
 })
 
+test('automatically stops at the default 30-second provider limit', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+  const { result } = renderHook(() => useRecorder())
+  let recording!: Promise<Blob>
+  await act(async () => { recording = result.current.start(); await Promise.resolve() })
+  act(() => { vi.advanceTimersByTime(30_000) })
+  await expect(recording).resolves.toBeInstanceOf(Blob)
+  expect(result.current.elapsed).toBe(30)
+  expect(result.current.status).toBe('idle')
+  expect(track.stop).toHaveBeenCalledOnce()
+})
+
 test('rejects an empty recording after Stop', async () => {
   FakeRecorder.emitAudio = false
   const { result } = renderHook(() => useRecorder())

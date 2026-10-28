@@ -5,7 +5,7 @@ import { PromptReview, QuestionsView } from './WorkflowViews'
 test('follow-up supports custom answers and explicit skipping', () => {
   const answer = vi.fn()
   const skip = vi.fn()
-  render(<QuestionsView questions={[{ id: 'audience', question: 'Who is the audience?', relevance: 'Changes tone', choices: ['Experts'], skippable: true }]} answers={{ audience: { questionId: 'audience', answer: '', skipped: false } }} onAnswer={answer} onSkip={skip} onBack={() => undefined} onGenerate={() => undefined} />)
+  render(<QuestionsView questions={[{ id: 'audience', question: 'Who is the audience?', relevance: 'Changes tone', choices: ['Experts'], skippable: true }]} answers={{ audience: { questionId: 'audience', question: 'Who is the audience?', answer: '', skipped: false } }} onAnswer={answer} onSkip={skip} onBack={() => undefined} onGenerate={() => undefined} />)
   fireEvent.change(screen.getByRole('textbox', { name: /answer: who/i }), { target: { value: 'New users' } })
   fireEvent.click(screen.getByRole('button', { name: /skip this question/i }))
   expect(answer).toHaveBeenCalledWith('audience', 'New users')

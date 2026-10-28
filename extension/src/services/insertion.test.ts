@@ -6,13 +6,13 @@ afterEach(() => vi.unstubAllGlobals())
 test('always attaches explicit user approval', async () => {
   const sendMessage = vi.fn().mockResolvedValue({ ok: true, platform: 'ChatGPT' })
   vi.stubGlobal('chrome', { runtime: { sendMessage } })
-  await expect(insertApprovedPrompt('Approved prompt')).resolves.toMatchObject({ ok: true })
-  expect(sendMessage).toHaveBeenCalledWith({ type: 'INSERT_PROMPT', prompt: 'Approved prompt', approved: true })
+  await expect(insertApprovedPrompt('Approved prompt', { tabId: 1, url: 'https://chatgpt.com/', title: 'ChatGPT' })).resolves.toMatchObject({ ok: true })
+  expect(sendMessage).toHaveBeenCalledWith({ type: 'INSERT_PROMPT', prompt: 'Approved prompt', approved: true, targetTabId: 1, targetUrl: 'https://chatgpt.com/' })
 })
 
 test('returns an accurate fallback error when messaging fails', async () => {
   vi.stubGlobal('chrome', { runtime: { sendMessage: vi.fn().mockRejectedValue(new Error('No receiver')) } })
-  await expect(insertApprovedPrompt('Keep this prompt')).resolves.toEqual({ ok: false, error: 'Could not contact the active tab.' })
+  await expect(insertApprovedPrompt('Keep this prompt', { tabId: 1, url: 'https://chatgpt.com/', title: 'ChatGPT' })).resolves.toEqual({ ok: false, error: 'Could not contact the active tab.' })
 })
 
 test('clipboard fallback reports success and denied access', async () => {

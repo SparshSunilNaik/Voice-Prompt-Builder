@@ -1,0 +1,10 @@
+{
+  "tested": "Live browser → local FastAPI → OpenRouter",
+  "prompt": "- Build an offline event registration web app for college students that supports college workshops.\n- The app must function offline.\n- Use browser local storage for data storage.\n- Registrations are free; no payment processing or user accounts are required.\n- Include registration validation.\n- Provide tests for the application.\n- Design a minimal accessible interface without tracking.\n- There is no fixed deadline for delivery.",
+  "observations": [
+    "Explicit clarification answers preserved",
+    "User-requested bullet formatting applied",
+    "Offline/local storage/free registration/no tracking/no fixed deadline retained",
+    "No insertion attempted from the standalone web preview"
+  ]
+}

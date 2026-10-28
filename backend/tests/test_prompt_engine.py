@@ -48,13 +48,14 @@ def test_generation_distinguishes_skipped_and_confirmed_answers() -> None:
         analysis=analysis(),
         methodology=analysis().methodology,
         answers=[
-            {"question_id": "audience", "answer": "Agents", "skipped": False},
-            {"question_id": "budget", "answer": "", "skipped": True},
+            {"question": "Which scope?", "question_id": "audience", "answer": "Agents", "skipped": False},
+            {"question": "Which scope?", "question_id": "budget", "answer": "", "skipped": True},
         ],
     )
     payload = json.loads(generation_user_prompt(request))
     assert payload["confirmed_followup_answers"][0]["answer"] == "Agents"
     assert payload["skipped_question_ids"] == ["budget"]
+    assert payload["skipped_questions"][0]["question"] == "Which scope?"
 
 
 def test_revision_context_preserves_previous_prompt_and_requested_change() -> None:
@@ -89,7 +90,7 @@ def test_duplicate_answers_are_rejected() -> None:
             analysis=analysis(),
             methodology=analysis().methodology,
             answers=[
-                {"question_id": "scope", "answer": "A"},
-                {"question_id": "scope", "answer": "B"},
+                {"question": "Which scope?", "question_id": "scope", "answer": "A"},
+                {"question": "Which scope?", "question_id": "scope", "answer": "B"},
             ],
         )

@@ -52,6 +52,17 @@ def test_strict_schema_normalizes_nested_pydantic_models() -> None:
     assert "default" not in nested["properties"]["label"]
 
 
+def test_strict_schema_preserves_property_names_that_match_schema_keywords() -> None:
+    class Payload(BaseModel):
+        examples: str
+        title: str
+        pattern: str
+
+    schema = strict_provider_schema(Payload)
+    assert set(schema["properties"]) == {"examples", "title", "pattern"}
+    assert set(schema["required"]) == set(schema["properties"])
+
+
 @pytest.mark.asyncio
 async def test_structured_completion_sends_schema_and_returns_usage() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:

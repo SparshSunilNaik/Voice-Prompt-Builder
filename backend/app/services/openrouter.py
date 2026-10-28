@@ -62,8 +62,16 @@ def strict_provider_schema(model: type[BaseModel]) -> dict[str, Any]:
             if node.get("type") == "object" and isinstance(properties, dict):
                 node["additionalProperties"] = False
                 node["required"] = list(properties)
-            for value in node.values():
-                normalize(value)
+            for key, value in node.items():
+                if key in {"properties", "$defs", "definitions", "patternProperties"} and isinstance(
+                    value, dict
+                ):
+                    # These are maps of user-defined names, not schema nodes.
+                    # A field named "examples" or "title" must not be removed.
+                    for child in value.values():
+                        normalize(child)
+                else:
+                    normalize(value)
         elif isinstance(node, list):
             for value in node:
                 normalize(value)
@@ -151,10 +159,11 @@ class OpenRouterClient:
                             "model": self.settings.openrouter_model,
                             "messages": messages,
                             "temperature": 0.2,
+                            "max_tokens": 6000,
                             "response_format": response_format,
                         },
                     )
-                except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                except httpx.RequestError as exc:
                     logger.warning(
                         "openrouter_network_error category=%s model=%s endpoint=%s",
                         type(exc).__name__,
@@ -184,6 +193,8 @@ class OpenRouterClient:
                 try:
                     body = response.json()
                     content = body["choices"][0]["message"]["content"]
+                    if not isinstance(content, str) or not content.strip():
+                        raise ValueError("Missing text content or provider refusal")
                 except (ValueError, KeyError, IndexError, TypeError) as exc:
                     logger.warning(
                         "openrouter_response_invalid category=response_shape "

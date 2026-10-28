@@ -1,4 +1,5 @@
 .env
+.backend-token
 .venv/
 __pycache__/
 *.py[cod]
@@ -17,3 +18,5 @@ extension/vite.config.d.ts
 .vscode/
 backend/.mypy_cache/
 backend/.ruff_cache/
+
+release/

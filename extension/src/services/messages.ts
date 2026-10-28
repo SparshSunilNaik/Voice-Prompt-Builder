@@ -4,7 +4,11 @@ export interface InsertPromptMessage {
   type: 'INSERT_PROMPT'
   prompt: string
   approved: true
+  targetTabId?: number
+  targetUrl?: string
 }
+
+export interface InsertionTarget { tabId: number; url: string; title: string }
 
 export interface InsertResult {
   ok: boolean

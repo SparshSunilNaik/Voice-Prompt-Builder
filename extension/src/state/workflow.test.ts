@@ -20,6 +20,6 @@ describe('workflow reducer', () => {
     const answered = workflowReducer(asked, { type: 'ANSWER', questionId: 'scope', answer: 'Internal users' })
     const skipped = workflowReducer(answered, { type: 'SKIP', questionId: 'scope' })
     expect(answered.answers.scope.answer).toBe('Internal users')
-    expect(skipped.answers.scope).toEqual({ questionId: 'scope', answer: '', skipped: true })
+    expect(skipped.answers.scope).toEqual({ questionId: 'scope', question: 'Question scope', answer: '', skipped: true })
   })
 })
