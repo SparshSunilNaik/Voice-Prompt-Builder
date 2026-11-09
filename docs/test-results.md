@@ -42,6 +42,21 @@ Run `.venv/Scripts/python -m pytest backend` and `.venv/Scripts/python -m ruff c
 
 The [current Gnani REST documentation](https://docs.gnani.ai/api/STT/speech-to-text) specifies a maximum of 30 seconds. Build 0.2.1 caps initial and clarification recordings at 30 seconds, caps legacy backend duration settings accordingly, and maps rejected-audio and credit errors to actionable messages. This mismatch could explain the initial rejection; its exact cause was not established because the old client did not record a safe upstream status diagnostic.
 
+## Hands-free voice answers and feedback-driven regeneration (0.5.0) — 9 November 2026
+
+- Backend: 72 pytest tests pass, ruff clean (3 new for learned feedback: payload, analysis use, bounds).
+- Extension: 90 Vitest tests pass (20 files), ESLint clean, build passes. New coverage: silence detection state machine, speech end event and watchdog, feedback memory (ranking, bounds, persistence, expiry, forgetting, spoken reasons), hands-free voice questions (auto-listen, no re-listen for answered questions, tap-to-interrupt), voice and text regenerate feedback, technique override, lessons carried into the next prompt.
+- Live (gpt-4o-mini): regenerating with "too long / wrong tone" feedback shortened the prompt from 331 to 270 words; a new prompt using only stored lessons was 227 words.
+- Human check (9 November 2026): the user ran 0.5.0 in Chrome with a real microphone; hands-free answers and Regenerate feedback worked well. Noisy-room behaviour was not separately tested.
+
+## Adaptive voice interview and prompting techniques (0.4.0) — 9 November 2026
+
+- Backend: 69 pytest tests pass, ruff clean (53 earlier + 16 new: adaptive endpoint, strategy model, technique checklist, interview guards).
+- Extension: 75 Vitest tests pass (18 files), ESLint clean, `npm run build` passes with the extension package check.
+- Live (OpenRouter `openai/gpt-4o-mini`, local backend): `backend/tests/live_adaptive_check.py` ran a classification task and a probability-reasoning task end to end. Questions were multiple choice and followed earlier answers; the reasoning task stopped by itself after 4 questions and switched from few-shot to one-shot after the answer "1 example"; generated examples were labelled as illustrative in both prompts. Raw output: `docs/live-adaptive-check.json`. A separate live check confirmed 4/4 explicit technique answers were honoured (1 example, no examples, final answer only, 2 of my own examples).
+- Found and fixed through live testing: the model ignored stated example counts, dropped the illustrative label, repeated near-identical questions and offered filler choices; each is now enforced server-side with unit tests.
+- Not verified: physical microphone capture and speech playback of the new voice interview in Chrome, and insertion after the new flow. Question quality depends on the configured model; gpt-4o-mini sometimes asks a weak first question.
+
 ## Prompt quality and strategy review (0.3.0)
 
 Methodology now separates recommended demonstration count, reasoning approach, and execution mode. Shot labels are derived from the demonstration count, so one-shot cannot be mislabelled as one response. A separate user-invoked `/api/review` call audits the current edited candidate against original input and follow-up answers and shows actionable issues and suggested strategy. Results are invalidated in the UI when the prompt changes. The checker does not execute the destination task or certify success.

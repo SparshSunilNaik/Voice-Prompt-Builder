@@ -1,0 +1,147 @@
+[
+  {
+    "scenario": "classification task (expect example-based prompting)",
+    "initial": {
+      "example_count": 3,
+      "example_source": "illustrative",
+      "reasoning": "chain_of_thought",
+      "techniques": [
+        "structured_output"
+      ],
+      "execution": "single_pass",
+      "max_iterations": 1,
+      "rationale": "The examples will guide the model in understanding the context and nuances of each category, while structured output ensures a clear format for the results.",
+      "example_requirement": "Examples must clearly illustrate the content of emails that fit into each category and provide a concise rationale for the classification.",
+      "success_criteria": [
+        "Emails are correctly categorized into billing, bug report, or feature request.",
+        "Each classification includes a relevant one-line reason."
+      ],
+      "examples": "few_shot"
+    },
+    "questions": [
+      {
+        "question": "What specific phrases or keywords should trigger each label?",
+        "choices": [
+          "Keywords for billing",
+          "Keywords for bug reports",
+          "Keywords for feature requests"
+        ],
+        "answer": "Keywords for billing"
+      }
+    ],
+    "final": {
+      "example_count": 3,
+      "example_source": "illustrative",
+      "reasoning": "chain_of_thought",
+      "techniques": [
+        "structured_output"
+      ],
+      "execution": "single_pass",
+      "max_iterations": 1,
+      "rationale": "The examples will guide the model in understanding the context and nuances of each category, while structured output ensures a clear format for the results.",
+      "example_requirement": "Examples must clearly illustrate the content of emails that fit into each category and provide a concise rationale for the classification.",
+      "success_criteria": [
+        "Emails are correctly categorized into billing, bug report, or feature request.",
+        "Each classification includes a relevant one-line reason."
+      ],
+      "examples": "few_shot"
+    },
+    "prompt": "You are tasked with categorizing customer support emails into three specific labels: 'billing', 'bug report', and 'feature request'. For each email, provide a one-line reason for the classification. Follow these steps:\n\n1. Read the email content carefully.\n2. Identify keywords or phrases that indicate the category (e.g., for billing, look for terms like 'invoice', 'charge', or 'payment').\n3. Determine if the email fits into one of the three categories based on the identified keywords.\n4. Write a one-line reason for the classification based on the content of the email.\n\nReturn the results in the following structured format:\n\n- Label: [billing/bug report/feature request]\n- Reason: [one-line explanation]\n\nIllustrative examples (generated; follow the pattern, not the specific facts):\n\n1. **Input:** \"I have a question about my last invoice. It seems higher than usual.\"\n   **Output:** \n   - Label: billing\n   - Reason: The email mentions an invoice and a question about charges.\n\n2. **Input:** \"The app crashes every time I try to open it.\"\n   **Output:** \n   - Label: bug report\n   - Reason: The email describes a recurring issue with the application crashing.\n\n3. **Input:** \"Can you add a feature that allows us to track our orders?\"\n   **Output:** \n   - Label: feature request\n   - Reason: The email requests a new feature for order tracking.",
+    "assumptions": [
+      "The user will provide the email content for classification.",
+      "The keywords for billing are known and will be used for categorization."
+    ],
+    "checks": [
+      "illustrative examples labelled as generated: OK"
+    ]
+  },
+  {
+    "scenario": "multi-step reasoning task (expect chain-of-thought)",
+    "initial": {
+      "example_count": 3,
+      "example_source": "illustrative",
+      "reasoning": "chain_of_thought",
+      "techniques": [
+        "role_prompting",
+        "structured_output",
+        "self_critique"
+      ],
+      "execution": "single_pass",
+      "max_iterations": 1,
+      "rationale": "The use of examples allows the user to see the application of concepts in action, while structured output ensures clarity in the solutions provided.",
+      "example_requirement": "Examples must demonstrate different types of probability puzzles and include step-by-step solutions.",
+      "success_criteria": [
+        "The prompt effectively guides the user through solving probability puzzles.",
+        "The explanations are clear and enhance the user's understanding."
+      ],
+      "examples": "few_shot"
+    },
+    "questions": [
+      {
+        "question": "What types of probability puzzles do you find most challenging?",
+        "choices": [
+          "Conditional probability",
+          "Bayesian problems",
+          "Combinatorial puzzles",
+          "Random variables"
+        ],
+        "answer": "Conditional probability"
+      },
+      {
+        "question": "How detailed should the explanations for solutions be?",
+        "choices": [
+          "Basic concepts only",
+          "Intermediate with examples",
+          "In-depth with theory"
+        ],
+        "answer": "Basic concepts only"
+      },
+      {
+        "question": "How many examples of conditional probability puzzles do you want?",
+        "choices": [
+          "1 example",
+          "3 examples",
+          "5 examples"
+        ],
+        "answer": "1 example"
+      },
+      {
+        "question": "What format do you prefer for the output of the prompt?",
+        "choices": [
+          "Step-by-step guide",
+          "Bullet points",
+          "Narrative explanation"
+        ],
+        "answer": "Step-by-step guide"
+      }
+    ],
+    "final": {
+      "example_count": 1,
+      "example_source": "illustrative",
+      "reasoning": "chain_of_thought",
+      "techniques": [
+        "role_prompting",
+        "structured_output",
+        "self_critique"
+      ],
+      "execution": "single_pass",
+      "max_iterations": 1,
+      "rationale": "The selected methodology remains effective given the user's specific requirements.",
+      "example_requirement": "The example must demonstrate a conditional probability puzzle and include a basic explanation of the solution.",
+      "success_criteria": [
+        "The prompt effectively guides the user through solving conditional probability puzzles.",
+        "The explanations are clear and enhance the user's understanding."
+      ],
+      "examples": "one_shot"
+    },
+    "prompt": "As a statistics tutor, your task is to help the user solve conditional probability puzzles. Provide a step-by-step guide for solving the puzzle, including a basic explanation of the solution. \n\n**Illustrative examples (generated; follow the pattern, not the specific facts):**  \n**Input:** A bag contains 3 red balls and 2 blue balls. If one ball is drawn at random, what is the probability that it is red?  \n**Output:**  \n1. Identify the total number of balls: 3 red + 2 blue = 5 balls.  \n2. Determine the number of favorable outcomes (red balls): 3 red balls.  \n3. Calculate the probability: P(red) = Number of red balls / Total number of balls = 3/5.  \n4. Final answer: The probability of drawing a red ball is 3/5.",
+    "assumptions": [
+      "The user is familiar with basic probability concepts.",
+      "The user seeks guidance specifically for conditional probability puzzles."
+    ],
+    "checks": [
+      "explicit '1 example' -> example_count 1: OK",
+      "illustrative examples labelled as generated: OK"
+    ]
+  }
+]

@@ -13,10 +13,16 @@ export interface Methodology {
   prompting?: PromptingStrategy
 }
 
+export const MAX_INTERVIEW_QUESTIONS = 8
+
+export type SupportingTechnique = 'role_prompting' | 'structured_output' | 'step_back' | 'self_consistency' | 'self_critique' | 'constraint_checklist'
+
 export interface PromptingStrategy {
   example_count?: number
+  example_source?: 'none' | 'user_supplied' | 'illustrative'
   examples: 'zero_shot' | 'one_shot' | 'few_shot'
-  reasoning: 'direct' | 'decompose_and_verify'
+  reasoning: 'direct' | 'chain_of_thought' | 'decompose_and_verify'
+  techniques?: SupportingTechnique[]
   execution: 'single_pass' | 'bounded_iteration'
   max_iterations: number
   rationale: string
@@ -59,4 +65,5 @@ export interface IntentAnalysis {
 export interface UsageMetadata { prompt_tokens: number; completion_tokens: number; total_tokens: number }
 export interface AnalyzeResponse { analysis: IntentAnalysis; usage: UsageMetadata; model: string }
 export interface RefineResponse { questions: FollowUpQuestion[]; usage: UsageMetadata; model: string }
+export interface NextQuestionResponse { done: boolean; question: FollowUpQuestion | null; methodology: Methodology; reason: string; asked: number; limit: number; usage: UsageMetadata; model: string }
 export interface GenerateResponse { prompt: string; assumptions: string[]; usage: UsageMetadata; model: string }

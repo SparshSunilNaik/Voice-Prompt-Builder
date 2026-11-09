@@ -4,7 +4,10 @@ import { Loading, Button } from './components/Controls'
 import { InputPanel } from './components/InputPanel'
 import { RecordingPanel } from './components/RecordingPanel'
 import { Shell } from './components/Shell'
-import { VoiceQuestions } from './components/VoiceQuestions'
+import { AdaptiveQuestions } from './components/AdaptiveQuestions'
+import { answerBasis } from './services/interview'
+import { clearFeedback, describeTechnique, learnedLessons, loadFeedback, recordFeedback, revisionFromFeedback, type FeedbackEntry } from './services/feedbackMemory'
+import type { RegenerateRequest } from './components/RegenerateFeedback'
 import { RecordingCancelledError, useRecorder } from './hooks/useRecorder'
 import { useWorkflow } from './hooks/useWorkflow'
 import { api } from './services/api'
@@ -13,8 +16,9 @@ import type { InsertionTarget } from './services/messages'
 import { cancelMicrophonePermissionRequest, requestMicrophonePermission } from './services/microphonePermission'
 import { stopSpeaking } from './services/speech'
 import { ConnectionSettings } from './components/ConnectionSettings'
-import { MethodologyReview, PromptReview, QuestionsView, TranscriptReview } from './components/WorkflowViews'
-import { MAX_RECORDING_SECONDS, type WorkflowStage } from './contracts'
+import { MethodologyReview, PromptReview, TranscriptReview } from './components/WorkflowViews'
+import { MAX_INTERVIEW_QUESTIONS, MAX_RECORDING_SECONDS, type Methodology, type WorkflowStage } from './contracts'
+import type { FollowUpAnswer } from './state/workflow'
 
 export function App() {
   const [state, dispatch, workflowReady] = useWorkflow()
@@ -22,6 +26,13 @@ export function App() {
   const [permissionPhase, setPermissionPhase] = useState<'idle' | 'checking' | 'denied'>('idle')
   const [inserting, setInserting] = useState(false)
   const [destination, setDestination] = useState<InsertionTarget | null>(null)
+  const [questionIndex, setQuestionIndex] = useState(0)
+  const [asking, setAsking] = useState(false)
+  const [askError, setAskError] = useState('')
+  const [interviewLimit, setInterviewLimit] = useState(5)
+  const [feedbackEntries, setFeedbackEntries] = useState<FeedbackEntry[]>([])
+  useEffect(() => { void loadFeedback().then(setFeedbackEntries) }, [])
+  const learned = learnedLessons(feedbackEntries)
   useEffect(() => {
     if (!workflowReady || state.stage === 'welcome') return
     const heading = document.querySelector<HTMLElement>('h2')
@@ -42,7 +53,7 @@ export function App() {
   }, [state.stage])
   const fail = (reason: unknown) => dispatch({ type: 'FAIL', message: reason instanceof Error ? reason.message : 'Something went wrong. Please try again.' })
   useEffect(() => () => { operation.current += 1; api.cancel(); cancelMicrophonePermissionRequest(); stopSpeaking() }, [])
-  const go = (stage: WorkflowStage) => { operation.current += 1; api.cancel(); stopSpeaking(); dispatch({ type: 'SET_STAGE', stage }) }
+  const go = (stage: WorkflowStage) => { operation.current += 1; api.cancel(); stopSpeaking(); setAsking(false); dispatch({ type: 'SET_STAGE', stage }) }
   const reset = () => { go('welcome'); recording.cancel(); cancelMicrophonePermissionRequest(); dispatch({ type: 'RESET' }); setNotice('Saved workflow cleared.'); retry.current = null }
 
   const analyze = async (input = state.roughInput) => {
@@ -50,7 +61,7 @@ export function App() {
     const id = ++operation.current
     retry.current = () => { void analyze(input) }
     dispatch({ type: 'SET_STAGE', stage: 'analyzing' })
-    try { const result = await api.analyze(input); if (id === operation.current) dispatch({ type: 'SET_ANALYSIS', analysis: result.analysis }) } catch (error) { if (id === operation.current) fail(error) }
+    try { const result = await api.analyze(input, learned); if (id === operation.current) dispatch({ type: 'SET_ANALYSIS', analysis: result.analysis }) } catch (error) { if (id === operation.current) fail(error) }
   }
   const beginRecording = async () => {
     setNotice('')
@@ -71,29 +82,66 @@ export function App() {
     } catch (error) { if (id === operation.current && !(error instanceof RecordingCancelledError)) fail(error) }
   }
   const cancelRecording = () => { go('welcome'); cancelMicrophonePermissionRequest(); recording.cancel(); setPermissionPhase('idle') }
+  // Starts the adaptive interview: the first question is planned from the request alone.
   const refine = async () => {
     if (!state.analysis || !state.methodology) return
-    setNotice('')
+    setNotice(''); setAskError('')
     const id = ++operation.current
     retry.current = () => { void refine() }
     dispatch({ type: 'SET_STAGE', stage: 'analyzing' })
     try {
-      const result = await api.refine(state.roughInput, state.analysis, state.methodology, state.methodologyInstructions)
+      const result = await api.nextQuestion(state.roughInput, state.analysis, state.methodology, [], state.methodologyInstructions)
       if (id !== operation.current) return
-      dispatch({ type: 'SET_QUESTIONS', questions: result.questions })
-      if (!result.questions.length) await generate([])
+      setInterviewLimit(Math.min(result.limit || MAX_INTERVIEW_QUESTIONS, MAX_INTERVIEW_QUESTIONS))
+      dispatch({ type: 'ADVANCE_INTERVIEW', keep: 0, basis: answerBasis([]), methodology: result.methodology, question: result.done ? null : result.question })
+      setQuestionIndex(0)
+      if (result.done || !result.question) await generate([], '', result.methodology)
     } catch (error) { if (id === operation.current) fail(error) }
   }
-  const generate = async (answers = Object.values(state.answers), revision = '') => {
-    if (!state.analysis || !state.methodology) return
+  // Moves past question `fromIndex`, reusing the next question only if it was planned from the same answers.
+  const askNext = async (fromIndex: number, latest?: FollowUpAnswer) => {
+    if (!state.analysis || !state.methodology || asking) return
+    const kept = state.questions.slice(0, fromIndex + 1)
+    // `latest` carries an answer dispatched in the same click, before React re-renders.
+    const answers = kept.map((question) => latest?.questionId === question.id ? latest : state.answers[question.id]).filter((answer): answer is FollowUpAnswer => !!answer)
+    const basis = answerBasis(answers)
+    const following = state.questions[fromIndex + 1]
+    setAskError('')
+    if (following ? state.questionBasis[following.id] === basis : state.interviewDoneBasis === basis) { setQuestionIndex(fromIndex + 1); return }
+    if (kept.length >= interviewLimit) { dispatch({ type: 'ADVANCE_INTERVIEW', keep: kept.length, basis, methodology: state.methodology, question: null }); setQuestionIndex(kept.length); return }
+    const id = ++operation.current
+    setAsking(true)
+    try {
+      const result = await api.nextQuestion(state.roughInput, state.analysis, state.methodology, answers, state.methodologyInstructions)
+      if (id !== operation.current) return
+      dispatch({ type: 'ADVANCE_INTERVIEW', keep: kept.length, basis, methodology: result.methodology, question: result.done ? null : result.question })
+      setQuestionIndex(kept.length)
+    } catch (error) {
+      if (id !== operation.current) return
+      setAskError(`${error instanceof Error ? error.message : 'Could not plan the next question.'} Retry, or build the prompt with the answers so far.`)
+      setQuestionIndex(kept.length)
+    } finally { if (id === operation.current) setAsking(false) }
+  }
+  const generate = async (answers = Object.values(state.answers), revision = '', methodology: Methodology | null = state.methodology, lessons = learned) => {
+    if (!state.analysis || !methodology) return
     setNotice('')
     const id = ++operation.current
-    retry.current = () => { void generate(answers, revision) }
+    retry.current = () => { void generate(answers, revision, methodology, lessons) }
     dispatch({ type: 'SET_STAGE', stage: 'generating' })
     try {
-      const result = await api.generate(state.roughInput, state.analysis, state.methodology, answers, state.methodologyInstructions, revision ? state.finalPrompt : '', revision)
+      const result = await api.generate(state.roughInput, state.analysis, methodology, answers, state.methodologyInstructions, revision ? state.finalPrompt : '', revision, lessons)
       if (id === operation.current) dispatch({ type: 'SET_PROMPT', prompt: result.prompt, assumptions: result.assumptions })
     } catch (error) { if (id === operation.current) fail(error) }
+  }
+  // Regenerating records why the prompt was rejected; the lessons then steer this and later prompts.
+  const regenerate = async ({ reasons, note, strategy }: RegenerateRequest) => {
+    if (!state.analysis || !state.methodology) return
+    const rejected = describeTechnique(state.methodology.prompting)
+    const methodology = strategy ? { ...state.methodology, prompting: strategy } : state.methodology
+    if (strategy) dispatch({ type: 'EDIT_METHODOLOGY', methodology })
+    const entries = await recordFeedback({ reasons, note, domain: state.analysis.domain, technique: rejected })
+    setFeedbackEntries(entries)
+    await generate(undefined, revisionFromFeedback(reasons, note, strategy ? describeTechnique(strategy) : undefined), methodology, learnedLessons(entries))
   }
   const copy = async () => setNotice(await copyPrompt(state.finalPrompt) ? 'Prompt copied to clipboard' : 'Clipboard access failed. Select the prompt and copy it manually.')
   const insert = async () => {
@@ -108,17 +156,22 @@ export function App() {
     } finally { insertionPending.current = false; setInserting(false) }
   }
   const step = ['welcome', 'listening', 'transcribing', 'transcript'].includes(state.stage) ? 0 : ['analyzing', 'methodology'].includes(state.stage) ? 1 : state.stage === 'questions' ? 2 : 3
-  const answerProps = { questions: state.questions, answers: state.answers, onAnswer: (questionId: string, answer: string) => dispatch({ type: 'ANSWER', questionId, answer }), onSkip: (questionId: string) => dispatch({ type: 'SKIP', questionId }), onBack: () => go('methodology'), onGenerate: () => { void generate() } }
+  const currentIndex = Math.min(questionIndex, state.questions.length)
+  const interviewDone = state.interviewDoneBasis !== null && state.interviewDoneBasis === answerBasis(state.questions.map((question) => state.answers[question.id]))
   let view
   if (state.stage === 'welcome') view = <InputPanel value={state.roughInput} onChange={(value) => { dispatch({ type: 'SET_MODE', mode: 'text' }); dispatch({ type: 'SET_INPUT', value }) }} onContinue={() => analyze()} onRecord={beginRecording} />
   else if (state.stage === 'listening') view = <RecordingPanel elapsed={recording.elapsed} requesting={permissionPhase !== 'idle' || recording.status === 'requesting'} permissionDenied={permissionPhase === 'denied'} stopping={recording.status === 'stopping'} onStop={recording.stop} onCancel={cancelRecording} />
   else if (state.stage === 'transcribing') view = <><Loading label="Transcribing your idea…" /><Button tone="quiet" onClick={cancelRecording}>Cancel</Button></>
   else if (state.stage === 'transcript') view = <TranscriptReview value={state.roughInput} onChange={(value) => dispatch({ type: 'SET_INPUT', value })} onBack={() => go('welcome')} onContinue={() => analyze()} />
-  else if (state.stage === 'analyzing') view = <><Loading label="Understanding your goal…" /><Button tone="quiet" onClick={() => go(state.analysis ? 'methodology' : 'welcome')}>Cancel</Button></>
+  else if (state.stage === 'analyzing') view = <><Loading label={state.analysis ? 'Planning your first question…' : 'Understanding your goal…'} /><Button tone="quiet" onClick={() => go(state.analysis ? 'methodology' : 'welcome')}>Cancel</Button></>
   else if (state.stage === 'methodology' && state.analysis && state.methodology) view = <MethodologyReview analysis={state.analysis} selected={state.methodology} instructions={state.methodologyInstructions} onSelect={(methodology) => dispatch({ type: 'EDIT_METHODOLOGY', methodology })} onInstructions={(instructions) => dispatch({ type: 'EDIT_METHODOLOGY', instructions })} onBack={() => go('welcome')} onContinue={refine} />
-  else if (state.stage === 'questions') view = state.inputMode === 'voice' ? <VoiceQuestions {...answerProps} onText={() => dispatch({ type: 'SET_MODE', mode: 'text' })} /> : <QuestionsView {...answerProps} />
+  else if (state.stage === 'questions') view = <AdaptiveQuestions questions={state.questions} answers={state.answers} index={currentIndex} voice={state.inputMode === 'voice'} asking={asking} error={askError} done={interviewDone} limit={interviewLimit} strategy={state.methodology?.prompting}
+    onAnswer={(questionId, answer) => dispatch({ type: 'ANSWER', questionId, answer })} onSkip={(questionId) => { const skipped = { questionId, question: state.questions.find((q) => q.id === questionId)?.question ?? '', answer: '', skipped: true }; dispatch({ type: 'SKIP', questionId }); void askNext(currentIndex, skipped) }}
+    onNext={() => { void askNext(currentIndex >= state.questions.length ? state.questions.length - 1 : currentIndex) }}
+    onPrevious={() => { setAskError(''); if (currentIndex > 0) setQuestionIndex(currentIndex - 1); else go('methodology') }}
+    onBuild={() => { void generate() }} onMode={(voice) => dispatch({ type: 'SET_MODE', mode: voice ? 'voice' : 'text' })} />
   else if (state.stage === 'generating') view = <><Loading label="Building your prompt…" /><Button tone="quiet" onClick={() => go(state.finalPrompt ? 'review' : state.questions.length ? 'questions' : 'methodology')}>Cancel</Button></>
-  else if (state.stage === 'review') view = <PromptReview prompt={state.finalPrompt} assumptions={state.assumptions} onChange={(prompt) => dispatch({ type: 'EDIT_PROMPT', prompt })} onBack={() => go(state.questions.length ? 'questions' : 'methodology')} onRegenerate={(revision) => generate(undefined, revision)} onCopy={copy} onInsert={insert} inserting={inserting} onReview={async () => { if (!state.analysis || !state.methodology) throw new Error('Return to methodology review first.'); return (await api.review(state.roughInput, state.analysis, state.methodology, Object.values(state.answers), state.finalPrompt, state.methodologyInstructions)).report }} />
+  else if (state.stage === 'review') view = <PromptReview prompt={state.finalPrompt} assumptions={state.assumptions} onChange={(prompt) => dispatch({ type: 'EDIT_PROMPT', prompt })} onBack={() => go(state.questions.length ? 'questions' : 'methodology')} onRegenerate={(request) => { void regenerate(request) }} voice={state.inputMode === 'voice'} strategy={state.methodology?.prompting} lessonCount={feedbackEntries.length} onForgetLessons={() => { void clearFeedback().then(() => { setFeedbackEntries([]); setNotice('Learned feedback forgotten.') }) }} onCopy={copy} onInsert={insert} inserting={inserting} onReview={async () => { if (!state.analysis || !state.methodology) throw new Error('Return to methodology review first.'); return (await api.review(state.roughInput, state.analysis, state.methodology, Object.values(state.answers), state.finalPrompt, state.methodologyInstructions)).report }} />
   else if (state.stage === 'complete') view = <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-center"><CheckCircle2 className="mx-auto mb-3 text-[var(--color-success)]" size={34} /><h2 className="view-title">Prompt inserted</h2><p className="my-3 text-sm">Review it in the composer. It was not sent.</p><div className="grid grid-cols-2 gap-2"><Button tone="quiet" onClick={() => go('review')}>Review prompt</Button><Button onClick={reset}>New prompt</Button><Button tone="quiet" onClick={copy}>Copy prompt</Button></div></div>
   else view = <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"><AlertTriangle className="text-[var(--color-warning)]" /><h2 className="mt-2 text-sm font-semibold">We hit a snag</h2><p role="alert" className="my-3 text-sm">{state.error}</p><div className="grid grid-cols-2 gap-2"><Button onClick={() => retry.current ? retry.current() : go('welcome')}>Retry last step</Button><Button tone="quiet" onClick={() => go(state.finalPrompt ? 'review' : state.analysis ? 'methodology' : 'welcome')}>Return to saved work</Button></div></div>
   if (!workflowReady) return <Shell><Loading label="Restoring your workflow…" /></Shell>

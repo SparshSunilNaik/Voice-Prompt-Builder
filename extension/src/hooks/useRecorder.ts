@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { acquireMicrophone } from '../services/microphoneLock'
 import { MAX_RECORDING_SECONDS } from '../contracts'
+import { watchSilence, type SilenceOptions } from '../services/silenceDetector'
 
 export type RecorderStatus = 'idle' | 'requesting' | 'recording' | 'stopping' | 'denied' | 'error'
-type StopReason = 'user' | 'cancel' | 'timeout' | 'failure' | null
+type StopReason = 'user' | 'cancel' | 'timeout' | 'failure' | 'no_speech' | null
+
+export interface StartOptions {
+  /** Stop automatically when the speaker pauses (hands-free answers). */
+  autoStop?: boolean | SilenceOptions
+}
 
 const preferredTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus']
 
@@ -43,8 +49,11 @@ export function useRecorder(maxSeconds = MAX_RECORDING_SECONDS) {
   const acquiring = useRef(false)
   const unlockMicrophone = useRef<(() => void) | null>(null)
   const trackEndHandlers = useRef(new Map<MediaStreamTrack, () => void>())
+  const stopSilenceWatch = useRef<(() => void) | null>(null)
 
   const release = useCallback(() => {
+    stopSilenceWatch.current?.()
+    stopSilenceWatch.current = null
     const activeStream = stream.current
     stream.current = null
     if (activeStream) {
@@ -78,7 +87,7 @@ export function useRecorder(maxSeconds = MAX_RECORDING_SECONDS) {
     }
   }, [release])
 
-  const stopWithReason = useCallback((reason: 'user' | 'timeout') => {
+  const stopWithReason = useCallback((reason: 'user' | 'timeout' | 'no_speech') => {
     const active = recorder.current
     if (active?.state === 'recording' || active?.state === 'paused') {
       stopReason.current = reason
@@ -101,7 +110,7 @@ export function useRecorder(maxSeconds = MAX_RECORDING_SECONDS) {
     setElapsed(0)
   }, [release])
 
-  const start = useCallback(async (): Promise<Blob> => {
+  const start = useCallback(async (options: StartOptions = {}): Promise<Blob> => {
     if (recorder.current || acquiring.current) {
       throw new RecordingCaptureError('A recording is already in progress.', 'already_recording')
     }
@@ -207,6 +216,9 @@ export function useRecorder(maxSeconds = MAX_RECORDING_SECONDS) {
       if (reason === 'cancel') {
         setStatus('idle')
         completion.current?.reject(new RecordingCancelledError())
+      } else if (reason === 'no_speech') {
+        setStatus('idle')
+        completion.current?.reject(new RecordingCaptureError('I did not hear an answer. Speak after the question, or choose an option.', 'no_speech'))
       } else if (failure) {
         setStatus('error')
         completion.current?.reject(failure)
@@ -236,6 +248,13 @@ export function useRecorder(maxSeconds = MAX_RECORDING_SECONDS) {
     try {
       active.start(250)
       startedAt.current = Date.now()
+      if (options.autoStop) {
+        stopSilenceWatch.current = watchSilence(media, (verdict) => {
+          if (stream.current !== media) return
+          debugLifecycle(verdict === 'silence' ? 'pause detected' : 'no speech detected')
+          stopWithReason(verdict === 'silence' ? 'user' : 'no_speech')
+        }, options.autoStop === true ? undefined : options.autoStop)
+      }
       setStatus('recording')
       debugLifecycle('recorder started')
     } catch (reason) {
@@ -251,7 +270,7 @@ export function useRecorder(maxSeconds = MAX_RECORDING_SECONDS) {
       throw failure
     }
     return result
-  }, [maxSeconds, rejectCapture, release])
+  }, [maxSeconds, rejectCapture, release, stopWithReason])
 
   useEffect(() => {
     if (status !== 'recording') return

@@ -1,6 +1,6 @@
 # Voice Prompt Builder
 
-Voice Prompt Builder is a voice-first Chrome side panel that turns a rough request into a deliberate, high-quality prompt. It identifies the goal, recommends a practical methodology, asks up to three useful questions, and lets the user revise and explicitly approve the result before insertion into ChatGPT, Claude, or Gemini. **It never sends a chat message.**
+Voice Prompt Builder is a voice-first Chrome side panel that turns a rough request into a deliberate, high-quality prompt. It identifies the goal, recommends a practical methodology, runs a short adaptive multiple-choice interview, and lets the user revise and explicitly approve the result before insertion into ChatGPT, Claude, or Gemini. **It never sends a chat message.**
 
 ## Features
 
@@ -8,7 +8,10 @@ Voice Prompt Builder is a voice-first Chrome side panel that turns a rough reque
 - Typed-input path and editable transcript review
 - Structured intent, risk, requirement, and methodology analysis through OpenRouter
 - User-selectable or custom methodology; no forced “most complex” approach
-- Zero to three contextual, skippable follow-up questions: spoken questions and recorded answers in voice mode, text questions and typed answers in text mode
+- Adaptive clarification: one multiple-choice question at a time (up to 5), each chosen from the answers so far; changing an earlier answer re-plans the following questions
+- Hands-free voice mode: each question and its numbered options are read aloud and shown as buttons, then the microphone opens automatically and stops when you pause. Say "option two" or the option text, or tap/type instead (which stops listening). Text mode keeps an **Answer by voice** button
+- Regenerate asks what was wrong first (reasons such as Too long, Wrong tone or Wrong prompting technique, plus your own words, spoken in voice mode). The prompt is rewritten to fix those problems, and the feedback is remembered locally as lessons that steer later prompts, with repeated complaints weighted more heavily. **Forget feedback** clears them
+- Prompting-technique selection that adapts to your answers: zero-shot, one-shot, few-shot (your examples or clearly labelled illustrative ones), chain-of-thought, decompose-and-verify, plus role prompting, structured output, step-back, self-consistency, self-critique and constraint checklists
 - Editable and regenerable final prompt with assumptions kept separate
 - Explicit insertion approval, destination verification, existing-draft protection, and a Copy fallback
 - Site-specific ChatGPT, Claude, and Gemini composer adapters
@@ -110,8 +113,8 @@ npm run build
 1. Type a rough request, or choose **Speak**, grant microphone access, and stop recording.
 2. Correct the transcript if needed.
 3. Review the recommended methodology, select an alternative, or add custom instructions.
-4. Answer or skip the contextual questions. Voice mode reads each question aloud; choose **Record answer**, speak, stop, and review the transcript. Text mode stays in text. You can explicitly switch from voice clarification to text.
-5. Edit the final prompt or enter revision instructions before regenerating it.
+4. Answer or skip each adaptive question. Click an option, type your own answer, or in voice mode listen to the question and options, then just answer: the microphone opens on its own and stops when you pause (say "option 2" or the option itself). Use **Repeat question & listen** to answer again. The next question adapts to your answer; **Build prompt now** stops early. The summary shows the prompting techniques chosen from your answers. You can switch between voice and text at any time.
+5. Edit the final prompt, or choose **Regenerate** and say what was wrong. Choosing **Wrong prompting technique** lets you pick zero/one/few-shot and direct/chain-of-thought for the rewrite.
 6. Use **Copy**, or choose **Approve & insert** while a supported chat tab is active.
 7. Review the inserted text and send it yourself only when ready. Existing composer drafts are protected; clear them yourself or use Copy. Choose **New prompt** for another task.
 
@@ -162,6 +165,6 @@ Voice clips are limited to 30 seconds to match the current [Gnani REST API contr
 
 ## Prompt quality and strategy
 
-Methodology recommendations now distinguish zero/one/few-shot demonstrations, direct versus plan-and-verify reasoning, and single-pass versus bounded tool execution. In final review, choose **Check quality & strategy** for a separate model audit of the edited prompt, requirements and follow-up answers. One review action may use two model stages to check proposed issues, plus bounded format retries. Use its suggestions as revision instructions when useful. Model review is advisory and does not run the destination task. See [nightwear prompt review](docs/nightwear-prompt-review.md) for an evaluated example.
+Methodology recommendations distinguish zero/one/few-shot demonstrations (user-supplied or illustrative), direct, chain-of-thought or decompose-and-verify reasoning, supporting techniques, and single-pass versus bounded tool execution. In final review, choose **Check quality & strategy** for a separate model audit of the edited prompt, requirements and follow-up answers. One review action may use two model stages to check proposed issues, plus bounded format retries. Use its suggestions as revision instructions when useful. Model review is advisory and does not run the destination task. See [nightwear prompt review](docs/nightwear-prompt-review.md) for an evaluated example.
 
 For Backend connection, use the single-line token in `.backend-token`, not a Gnani or OpenRouter API key.

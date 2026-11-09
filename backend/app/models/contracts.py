@@ -11,9 +11,23 @@ class HealthResponse(BaseModel):
     services: dict[str, bool]
 
 
+SupportingTechnique = Literal[
+    "role_prompting",
+    "structured_output",
+    "step_back",
+    "self_consistency",
+    "self_critique",
+    "constraint_checklist",
+]
+
+
 class PromptingStrategy(BaseModel):
     example_count: int = Field(default=0, ge=0, le=5)
-    reasoning: Literal["direct", "decompose_and_verify"] = "direct"
+    # Where demonstrations come from: none (zero-shot), examples the user supplies,
+    # or illustrative examples the generator writes and labels as such.
+    example_source: Literal["none", "user_supplied", "illustrative"] = "none"
+    reasoning: Literal["direct", "chain_of_thought", "decompose_and_verify"] = "direct"
+    techniques: list[SupportingTechnique] = Field(default_factory=list, max_length=4)
     execution: Literal["single_pass", "bounded_iteration"] = "single_pass"
     max_iterations: int = Field(default=3, ge=1, le=5)
     rationale: str = Field(default="Start with the simplest sufficient instructions.", max_length=1200)
@@ -31,8 +45,13 @@ class PromptingStrategy(BaseModel):
     def consistent_strategy(self):
         if self.example_count == 0:
             self.example_requirement = "No reference examples required."
+            self.example_source = "none"
+        elif self.example_source == "none":
+            # A demonstration count without a source would silently drop the technique.
+            self.example_source = "illustrative"
         if self.execution == "single_pass":
             self.max_iterations = 1
+        self.techniques = list(dict.fromkeys(self.techniques))
         return self
 
 
@@ -71,8 +90,13 @@ class UsageMetadata(BaseModel):
     total_tokens: int = 0
 
 
+Lesson = Annotated[str, Field(max_length=300)]
+
+
 class AnalyzeRequest(BaseModel):
     input: str = Field(min_length=3, max_length=20_000)
+    # Problems the user flagged on earlier prompts; used as preferences to avoid.
+    learned_feedback: list[Lesson] = Field(default_factory=list, max_length=10)
 
 
 class AnalyzeResponse(BaseModel):
@@ -112,14 +136,67 @@ class FollowUpAnswer(BaseModel):
     skipped: bool = False
 
 
+MAX_ANSWERS = 8
+
+
+def _unique_answers(answers: list[FollowUpAnswer]) -> None:
+    ids = [answer.question_id for answer in answers]
+    if len(ids) != len(set(ids)):
+        raise ValueError("Follow-up answers must reference unique questions")
+
+
+class NextQuestionRequest(BaseModel):
+    input: str = Field(min_length=3, max_length=20_000)
+    analysis: IntentAnalysis
+    methodology: Methodology
+    custom_instructions: str = Field(default="", max_length=5000)
+    answers: list[FollowUpAnswer] = Field(default_factory=list, max_length=MAX_ANSWERS)
+
+    @model_validator(mode="after")
+    def unique_answer_ids(self):
+        _unique_answers(self.answers)
+        return self
+
+
+class DraftQuestion(BaseModel):
+    """Model-authored question; IDs are sanitized server-side before reaching the client."""
+
+    id: str = Field(max_length=80)
+    question: str = Field(min_length=1, max_length=500)
+    relevance: str = Field(min_length=1, max_length=500)
+    choices: list[Annotated[str, Field(max_length=300)]] = Field(default_factory=list, max_length=6)
+
+
+class NextQuestionDecision(BaseModel):
+    # Field order matters for generation: the model reviews how the answers change the
+    # technique before it decides whether and what to ask next.
+    strategy_review: str = Field(default="", max_length=800)
+    strategy: PromptingStrategy
+    done: bool
+    reason: str = Field(default="", max_length=500)
+    question: DraftQuestion | None = None
+
+
+class NextQuestionResponse(BaseModel):
+    done: bool
+    question: FollowUpQuestion | None = None
+    methodology: Methodology
+    reason: str = ""
+    asked: int
+    limit: int
+    usage: UsageMetadata = Field(default_factory=UsageMetadata)
+    model: str
+
+
 class GenerateRequest(BaseModel):
     input: str = Field(min_length=3, max_length=20_000)
     analysis: IntentAnalysis
     methodology: Methodology
-    answers: list[FollowUpAnswer] = Field(default_factory=list, max_length=3)
+    answers: list[FollowUpAnswer] = Field(default_factory=list, max_length=MAX_ANSWERS)
     custom_instructions: str = Field(default="", max_length=5000)
     previous_prompt: str = Field(default="", max_length=30_000)
     revision_request: str = Field(default="", max_length=5000)
+    learned_feedback: list[Lesson] = Field(default_factory=list, max_length=10)
 
     @model_validator(mode="after")
     def unique_answer_ids(self):

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Voice Prompt Builder",
   "description": "Turn rough spoken or typed ideas into precise prompts.",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "minimum_chrome_version": "116",
   "permissions": [
     "sidePanel",

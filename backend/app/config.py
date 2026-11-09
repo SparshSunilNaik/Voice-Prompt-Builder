@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     max_audio_duration_seconds: int = Field(default=30, ge=1, le=30)
     max_audio_size_mb: int = Field(default=15, ge=1, le=25)
     max_followup_questions: int = Field(default=3, ge=0, le=3)
+    max_adaptive_questions: int = Field(default=5, ge=0, le=8)
 
     @field_validator("max_audio_duration_seconds", mode="before")
     @classmethod

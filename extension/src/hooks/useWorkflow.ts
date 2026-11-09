@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { initialWorkflow, workflowReducer, type WorkflowState } from '../state/workflow'
-import type { IntentAnalysis, Methodology } from '../contracts'
+import { MAX_INTERVIEW_QUESTIONS, type IntentAnalysis, type Methodology } from '../contracts'
 
 const KEY = 'voicePromptWorkflow'
 const DAY = 24 * 60 * 60 * 1000
@@ -20,15 +20,17 @@ export function restoreWorkflow(saved: unknown): WorkflowState {
   const state = envelope.state as Partial<WorkflowState> | undefined
   if (!state || typeof state.roughInput !== 'string' || typeof state.finalPrompt !== 'string') return initialWorkflow
   const restored: WorkflowState = {
-    ...initialWorkflow, answers: {}, inputMode: state.inputMode === 'voice' ? 'voice' : 'text',
+    ...initialWorkflow, answers: {}, questionBasis: {}, interviewDoneBasis: typeof state.interviewDoneBasis === 'string' ? state.interviewDoneBasis.slice(0, 50000) : null, inputMode: state.inputMode === 'voice' ? 'voice' : 'text',
     roughInput: state.roughInput.slice(0, 20000), transcript: typeof state.transcript === 'string' ? state.transcript.slice(0, 20000) : '',
     analysis: analysis(state.analysis) ? state.analysis : null, methodology: method(state.methodology) ? state.methodology : null,
     methodologyInstructions: typeof state.methodologyInstructions === 'string' ? state.methodologyInstructions.slice(0, 5000) : '',
     finalPrompt: state.finalPrompt.slice(0, 30000), assumptions: strings(state.assumptions) ? state.assumptions : [],
   }
-  if (Array.isArray(state.questions)) restored.questions = state.questions.filter((q) => q && typeof q.id === 'string' && typeof q.question === 'string' && typeof q.relevance === 'string' && strings(q.choices)).slice(0, 3)
+  if (Array.isArray(state.questions)) restored.questions = state.questions.filter((q) => q && typeof q.id === 'string' && typeof q.question === 'string' && typeof q.relevance === 'string' && strings(q.choices)).slice(0, MAX_INTERVIEW_QUESTIONS)
   for (const q of restored.questions) {
     const answer = state.answers?.[q.id]
+    const basis = state.questionBasis?.[q.id]
+    restored.questionBasis[q.id] = typeof basis === 'string' ? basis.slice(0, 50000) : ''
     restored.answers[q.id] = { questionId: q.id, question: q.question, answer: typeof answer?.answer === 'string' ? answer.answer.slice(0, 5000) : '', skipped: answer?.skipped === true }
   }
   const checkpoint = restored.finalPrompt ? 'review' : restored.analysis && restored.methodology ? 'methodology' : restored.roughInput ? 'transcript' : 'welcome'
