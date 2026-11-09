@@ -2,6 +2,8 @@
 
 Voice Prompt Builder is a voice-first Chrome side panel that turns a rough request into a deliberate, high-quality prompt. It identifies the goal, recommends a practical methodology, runs a short adaptive multiple-choice interview, and lets the user revise and explicitly approve the result before insertion into ChatGPT, Claude, or Gemini. **It never sends a chat message.**
 
+**Website and demo video:** https://sparshsunilnaik.github.io/Voice-Prompt-Builder/
+
 ## Features
 
 - Speech capture through the browser microphone and Gnani Prisma v2.5 transcription

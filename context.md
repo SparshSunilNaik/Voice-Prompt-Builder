@@ -4,6 +4,18 @@ Snapshot: 2026-10-29 (Asia/Kolkata).
 
 Project folder: `D:\gnani ai\Voice-Prompt-Builder`
 
+## Status update — 2026-11-09 evening (Claude Code): public landing page + USP video
+
+**What changed**
+- `site/`: static landing page (hero + 49 s demo video, features, how it works, 4-step install, trust, FAQ) with Open Graph/Twitter tags so links preview with `poster.png`. "Download beta" = GitHub source zip of `main` (start scripts build the extension, so no Release is needed); "Request beta access" = issue form `.github/ISSUE_TEMPLATE/beta-access.yml`.
+- `.github/workflows/pages.yml` deploys `site/` to GitHub Pages on pushes touching `site/**`. Target URL: https://sparshsunilnaik.github.io/Voice-Prompt-Builder/ — **requires repo Settings → Pages → Source = "GitHub Actions"** (needs repo admin; one time), then re-run the workflow.
+- `marketing/usp-video/`: 1080×1080 animated USP video. `narration.json` + `make-voice.py` (edge-tts neural voices: narrator, app, user) produce `voice/` clips and a timeline; `render.mjs` warps the 30 s animation to fit and muxes AAC (`--silent` for the original cut). Outputs (mp4, voice/) are git-ignored; `POSTS.md` has X/LinkedIn copy pointing at the site URL.
+- README links the site.
+
+**Verified 2026-11-09**: page screenshots at 1366 px and 375 px, no console errors, no horizontal overflow; zip and README links return 200. Video sync checked on stills; audio −16 LUFS target. Not verified: the live Pages deployment (needs the setting above) and listening to the voice-over by a human.
+
+**Next action**: enable Pages (Source: GitHub Actions), confirm the URL loads and its link preview on X/LinkedIn, then post.
+
 ## Status update — 2026-11-09 later (Claude Code): hands-free voice + feedback-driven regenerate (v0.5.0, uncommitted)
 
 **What changed (on top of 0.4.0 below)**

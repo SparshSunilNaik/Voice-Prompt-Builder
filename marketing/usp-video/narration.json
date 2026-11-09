@@ -1,0 +1,24 @@
+{
+  "voices": {
+    "narrator": { "voice": "en-US-AndrewMultilingualNeural", "rate": "+10%" },
+    "user": { "voice": "en-IN-PrabhatNeural", "rate": "+8%" },
+    "app": { "voice": "en-US-AvaMultilingualNeural", "rate": "+16%" }
+  },
+  "clips": [
+    { "id": "01", "at": 0.15, "who": "narrator", "text": "Your AI is only as good as your prompt." },
+    { "id": "02", "at": 1.35, "who": "narrator", "text": "So stop typing them." },
+    { "id": "03", "at": 3.4, "who": "narrator", "text": "Just say what you need." },
+    { "id": "04", "at": 4.3, "who": "user", "text": "Build a prompt that sorts our support emails into billing, bugs, and feature requests." },
+    { "id": "05", "at": 8.4, "who": "narrator", "text": "It asks smart follow-up questions. Out loud." },
+    { "id": "06", "at": 9.4, "who": "app", "text": "Which emails are hardest to label? One, billing versus refunds. Two, bugs that sound like feature asks. Three, emails with several issues." },
+    { "id": "07", "at": 11.5, "who": "user", "text": "Option two." },
+    { "id": "08", "at": 13.1, "who": "narrator", "text": "No clicks. Every question builds on your last answer." },
+    { "id": "09", "at": 14.5, "who": "narrator", "text": "Then it picks the right prompting technique." },
+    { "id": "10", "at": 16.6, "who": "narrator", "text": "Few-shot. Chain-of-thought. Structured output." },
+    { "id": "11", "at": 19.5, "who": "narrator", "text": "Don't like the result? Tell it what's wrong." },
+    { "id": "12", "at": 21.4, "who": "narrator", "text": "It rewrites the prompt, and remembers for next time." },
+    { "id": "13", "at": 24.7, "who": "narrator", "text": "Then drops it right into ChatGPT, Claude, or Gemini." },
+    { "id": "14", "at": 26.2, "who": "narrator", "text": "It never hits send. You stay in control." },
+    { "id": "15", "at": 28.0, "who": "narrator", "text": "Voice Prompt Builder. Think aloud. Prompt precisely." }
+  ]
+}

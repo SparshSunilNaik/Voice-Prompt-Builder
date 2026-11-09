@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Voice Prompt Builder — USP video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d12; --surface: #13161e; --interactive: #1b1f2a; --border: #292d39;
+    --text: #f2f3f7; --muted: #949aaa; --accent: #9b8cff; --accent-2: #c3b9ff;
+    --success: #54d6a0; --warning: #f0be73;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1080px; overflow: hidden; background: var(--bg); }
+  body { font-family: Inter, "Segoe UI", system-ui, sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; }
+  #stage { position: relative; width: 1080px; height: 1080px; overflow: hidden; background: var(--bg); }
+  .glow { position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none; }
+  #glowA { width: 620px; height: 620px; background: rgba(155, 140, 255, .20); top: -220px; right: -180px; }
+  #glowB { width: 520px; height: 520px; background: rgba(84, 214, 160, .08); bottom: -240px; left: -160px; }
+  .grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 54px 54px; mask-image: radial-gradient(circle at 50% 45%, #000 30%, transparent 75%); }
+
+  .brand { position: absolute; top: 56px; left: 72px; display: flex; align-items: center; gap: 14px; font-weight: 600; font-size: 24px; letter-spacing: -.01em; }
+  .brand .mark { width: 46px; height: 46px; border-radius: 13px; border: 1px solid var(--border); background: var(--surface); display: grid; place-items: center; color: var(--accent); }
+  .brand small { display: block; font-size: 15px; font-weight: 500; color: var(--muted); }
+
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .headline { position: absolute; left: 72px; right: 72px; top: 150px; font-size: 62px; line-height: 1.08; font-weight: 800; letter-spacing: -.035em; text-wrap: balance; }
+  .headline em { font-style: normal; color: var(--accent); }
+  .sub { position: absolute; left: 72px; right: 72px; top: 300px; font-size: 26px; color: var(--muted); font-weight: 500; }
+
+  .panel { position: absolute; left: 150px; right: 150px; top: 380px; border: 1px solid var(--border); background: var(--surface); border-radius: 28px; padding: 36px; box-shadow: 0 30px 80px rgba(0,0,0,.45); }
+  .eyebrow { font-size: 15px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+  .ptitle { margin-top: 10px; font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+
+  /* Scene 0 */
+  #s0 .big { position: absolute; left: 72px; right: 72px; font-size: 92px; line-height: 1.02; font-weight: 800; letter-spacing: -.045em; }
+  #s0 .l1 { top: 300px; } #s0 .l2 { top: 620px; color: var(--accent); }
+
+  /* Scene 1 */
+  .orb { position: relative; width: 150px; height: 150px; margin: 34px auto 26px; border-radius: 50%; border: 2px solid rgba(84,214,160,.45); background: rgba(84,214,160,.08); display: grid; place-items: center; color: var(--success); }
+  .orb .ring { position: absolute; inset: -14px; border-radius: 50%; border: 2px solid rgba(84,214,160,.28); }
+  .wave { display: flex; align-items: center; justify-content: center; gap: 7px; height: 70px; }
+  .wave i { display: block; width: 9px; border-radius: 6px; background: linear-gradient(var(--success), rgba(84,214,160,.35)); }
+  .transcript { margin-top: 26px; min-height: 150px; border: 1px solid var(--border); background: var(--bg); border-radius: 16px; padding: 22px 24px; font-size: 26px; line-height: 1.5; }
+  .caret { display: inline-block; width: 3px; height: 30px; background: var(--accent); vertical-align: -5px; margin-left: 3px; }
+  .label { margin-top: 14px; font-size: 18px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--success); }
+
+  /* Scene 2 */
+  .question { margin-top: 18px; font-size: 32px; font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
+  .opts { margin-top: 24px; display: grid; gap: 14px; }
+  .opt { display: flex; gap: 16px; align-items: center; border: 1.5px solid var(--border); background: var(--interactive); color: #c9ccd6; border-radius: 16px; padding: 18px 22px; font-size: 24px; }
+  .opt b { color: var(--accent); font-weight: 800; }
+  .opt.sel { border-color: var(--accent); background: rgba(155,140,255,.14); color: var(--text); box-shadow: 0 0 0 4px rgba(155,140,255,.15); }
+  .status { margin-top: 22px; height: 64px; border-radius: 16px; display: flex; align-items: center; gap: 14px; padding: 0 20px; font-size: 21px; font-weight: 600; }
+  .status.speak { background: rgba(155,140,255,.10); border: 1px solid rgba(155,140,255,.35); color: var(--accent-2); }
+  .status.listen { background: rgba(84,214,160,.08); border: 1px solid rgba(84,214,160,.35); color: var(--success); }
+  .minwave { display: flex; gap: 4px; align-items: center; height: 30px; margin-left: auto; }
+  .minwave i { width: 5px; border-radius: 3px; background: currentColor; display: block; }
+  .toast { position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; bottom: 120px; white-space: nowrap; background: var(--text); color: var(--bg); font-size: 22px; font-weight: 700; padding: 14px 26px; border-radius: 999px; }
+
+  /* Scene 3 */
+  .chips { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 14px; min-height: 150px; align-content: flex-start; }
+  .chip { position: relative; border: 1.5px solid rgba(155,140,255,.5); background: rgba(155,140,255,.10); border-radius: 14px; padding: 14px 20px; font-size: 24px; font-weight: 600; }
+  .chip.old { border-color: var(--border); background: var(--interactive); color: var(--muted); }
+  .chip .strike { position: absolute; left: 12px; right: 12px; top: 50%; height: 3px; background: var(--warning); transform-origin: left; }
+  .why { margin-top: 26px; border-top: 1px solid var(--border); padding-top: 22px; font-size: 23px; color: var(--muted); line-height: 1.5; min-height: 110px; }
+  .menu { position: absolute; left: 72px; right: 72px; bottom: 120px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .menu span { font-size: 18px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 8px 16px; background: rgba(19,22,30,.7); }
+
+  /* Scene 4 */
+  .reasons { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 12px; }
+  .reason { border: 1.5px solid var(--border); background: var(--interactive); color: var(--muted); border-radius: 12px; padding: 12px 18px; font-size: 21px; font-weight: 500; }
+  .reason.on { border-color: var(--accent); background: rgba(155,140,255,.14); color: var(--text); }
+  .btn { margin-top: 24px; height: 66px; border-radius: 16px; background: var(--accent); color: #11131a; font-size: 23px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .meter { margin-top: 26px; border: 1px solid var(--border); background: var(--bg); border-radius: 16px; padding: 20px 24px; }
+  .meter .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; color: var(--muted); }
+  .meter .num { font-size: 44px; font-weight: 800; color: var(--text); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .bar { margin-top: 14px; height: 14px; border-radius: 8px; background: var(--interactive); overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--accent), var(--success)); }
+  .pill { display: inline-flex; align-items: center; gap: 10px; margin-top: 18px; font-size: 20px; font-weight: 600; color: var(--success); }
+
+  /* Scene 5 */
+  .tiles { position: absolute; left: 72px; right: 72px; top: 400px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .tile { border: 1px solid var(--border); background: var(--surface); border-radius: 22px; padding: 26px 24px 24px; height: 300px; position: relative; overflow: hidden; }
+  .tile h4 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  .composer { position: absolute; left: 20px; right: 20px; bottom: 20px; height: 150px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg); padding: 14px 16px; }
+  .composer .line { height: 12px; border-radius: 6px; background: rgba(155,140,255,.55); margin-bottom: 11px; transform-origin: left; }
+  .composer .send { position: absolute; right: 12px; bottom: 12px; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border); background: var(--interactive); }
+  .guard { position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; top: 770px; white-space: nowrap; display: flex; align-items: center; gap: 14px; font-size: 28px; font-weight: 700; color: var(--success); border: 1.5px solid rgba(84,214,160,.4); background: rgba(84,214,160,.08); padding: 18px 30px; border-radius: 999px; }
+
+  /* Scene 6 */
+  #s6 .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  #s6 .logo { width: 140px; height: 140px; border-radius: 36px; border: 1px solid var(--border); background: var(--surface); display: grid; place-items: center; color: var(--accent); box-shadow: 0 0 80px rgba(155,140,255,.35); }
+  #s6 h1 { margin-top: 40px; font-size: 84px; font-weight: 800; letter-spacing: -.045em; }
+  #s6 .tag { margin-top: 16px; font-size: 36px; color: var(--accent-2); font-weight: 600; }
+  #s6 .steps { margin-top: 44px; display: flex; gap: 18px; font-size: 24px; font-weight: 600; color: var(--muted); align-items: center; }
+  #s6 .steps b { color: var(--text); }
+  #s6 .beta { margin-top: 46px; font-size: 22px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--bg); background: var(--accent); padding: 14px 28px; border-radius: 999px; }
+
+  .progress { position: absolute; left: 72px; right: 72px; bottom: 56px; display: flex; gap: 10px; }
+  .progress div { flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .progress div i { display: block; height: 100%; width: 0; background: var(--accent); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="glow" id="glowA"></div><div class="glow" id="glowB"></div><div class="grid"></div>
+
+  <div class="brand" id="brand"><div class="mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/></svg></div><div>Voice Prompt Builder<small>Chrome extension</small></div></div>
+
+  <!-- Scene 0: hook -->
+  <section class="scene" id="s0">
+    <div class="big l1" id="s0a">Your AI is only as good as your <em style="font-style:normal;color:var(--accent)">prompt</em>.</div>
+    <div class="big l2" id="s0b">So stop typing them.</div>
+  </section>
+
+  <!-- Scene 1: speak -->
+  <section class="scene" id="s1">
+    <div class="headline" id="s1h">Just <em>say</em> what you need.</div>
+    <div class="panel" id="s1p">
+      <div class="eyebrow">Start with the idea</div>
+      <div class="orb"><div class="ring" id="s1ring"></div><svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div>
+      <div class="wave" id="s1wave"></div>
+      <div class="transcript"><span id="s1text"></span><span class="caret" id="s1caret"></span></div>
+      <div class="label"><span class="dot"></span><span id="s1label">Listening…</span></div>
+    </div>
+  </section>
+
+  <!-- Scene 2: adaptive voice questions -->
+  <section class="scene" id="s2">
+    <div class="headline" id="s2h">It asks the right questions.<br><em>Out loud.</em></div>
+    <div class="panel" id="s2p">
+      <div class="eyebrow">Question 1 · adapts to your answers</div>
+      <div class="question">Which emails are hardest to label?</div>
+      <div class="opts">
+        <div class="opt" id="o1"><b>1.</b> Billing vs. refund requests</div>
+        <div class="opt" id="o2"><b>2.</b> Bugs that sound like feature asks</div>
+        <div class="opt" id="o3"><b>3.</b> Emails with several issues</div>
+      </div>
+      <div class="status speak" id="s2speak"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>Reading the question and options aloud…</div>
+      <div class="status listen" id="s2listen" style="display:none"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg><span id="s2heard">Listening — just answer</span><div class="minwave" id="s2wave"></div></div>
+    </div>
+    <div class="toast" id="s2toast">No clicks needed · the next question builds on your answer</div>
+  </section>
+
+  <!-- Scene 3: techniques -->
+  <section class="scene" id="s3">
+    <div class="headline" id="s3h">Then picks the right<br><em>prompting technique.</em></div>
+    <div class="panel" id="s3p">
+      <div class="eyebrow">Adapted to your answers</div>
+      <div class="ptitle">Prompting techniques</div>
+      <div class="chips">
+        <div class="chip old" id="c0">Zero-shot<span class="strike" id="c0s"></span></div>
+        <div class="chip" id="c1">Few-shot · 3 examples</div>
+        <div class="chip" id="c2">Chain-of-thought</div>
+        <div class="chip" id="c3">Structured output</div>
+      </div>
+      <div class="why" id="s3why"></div>
+    </div>
+    <div class="menu" id="s3menu"><span>Zero-shot</span><span>One-shot</span><span>Few-shot</span><span>Chain-of-thought</span><span>Decompose &amp; verify</span><span>Role prompting</span><span>Self-critique</span></div>
+  </section>
+
+  <!-- Scene 4: feedback learning -->
+  <section class="scene" id="s4">
+    <div class="headline" id="s4h">Tell it what's wrong. <em>It learns.</em></div>
+    <div class="panel" id="s4p">
+      <div class="ptitle" style="margin-top:0">What should change?</div>
+      <div class="reasons">
+        <div class="reason" id="r1">Too long</div>
+        <div class="reason" id="r2">Too vague</div>
+        <div class="reason" id="r3">Wrong tone or style</div>
+        <div class="reason" id="r4">Missed what I asked</div>
+      </div>
+      <div class="btn" id="s4btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Regenerate with feedback</div>
+      <div class="meter" id="s4meter">
+        <div class="row"><span>Prompt length · one round of feedback</span><span class="num" id="s4num">331 words</span></div>
+        <div class="bar"><i id="s4bar" style="width:100%"></i></div>
+      </div>
+      <div class="pill" id="s4pill"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Remembered for every future prompt</div>
+    </div>
+  </section>
+
+  <!-- Scene 5: insert, never send -->
+  <section class="scene" id="s5">
+    <div class="headline" id="s5h">Lands right in<br><em>ChatGPT, Claude or Gemini.</em></div>
+    <div class="tiles">
+      <div class="tile" id="t1"><h4>ChatGPT</h4><div class="composer"><div class="line" style="width:92%"></div><div class="line" style="width:78%"></div><div class="line" style="width:60%"></div><div class="send"></div></div></div>
+      <div class="tile" id="t2"><h4>Claude</h4><div class="composer"><div class="line" style="width:88%"></div><div class="line" style="width:82%"></div><div class="line" style="width:52%"></div><div class="send"></div></div></div>
+      <div class="tile" id="t3"><h4>Gemini</h4><div class="composer"><div class="line" style="width:90%"></div><div class="line" style="width:70%"></div><div class="line" style="width:64%"></div><div class="send"></div></div></div>
+    </div>
+    <div class="guard" id="s5guard"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>It never hits send. You stay in control.</div>
+  </section>
+
+  <!-- Scene 6: end card -->
+  <section class="scene" id="s6">
+    <div class="center">
+      <div class="logo" id="s6logo"><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/></svg></div>
+      <h1 id="s6t">Voice Prompt Builder</h1>
+      <div class="tag" id="s6tag">Think aloud. Prompt precisely.</div>
+      <div class="steps" id="s6steps"><b>Speak</b> → <b>Clarify</b> → <b>Build</b> → <b>Insert</b></div>
+      <div class="beta" id="s6beta">Chrome extension · Beta</div>
+    </div>
+  </section>
+
+  <div class="progress" id="progress"></div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id)
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x))
+  const seg = (t, a, b) => clamp((t - a) / (b - a))
+  const easeOut = (x) => 1 - Math.pow(1 - x, 3)
+  const easeInOut = (x) => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2
+  /** Opacity for an element visible in [a, b] with fades at both ends. */
+  const win = (t, a, b, f = .35) => Math.min(easeOut(seg(t, a, a + f)), 1 - easeInOut(seg(t, b - f, b)))
+  const rise = (el, p, dist = 28) => { el.style.opacity = p; el.style.transform = `translateY(${(1 - p) * dist}px)` }
+  const pop = (el, p) => { el.style.opacity = p; el.style.transform = `scale(${.86 + .14 * easeOut(p)})` }
+
+  // Scene timeline (seconds). Total 30 s.
+  const SCENES = [[0, 3.3], [3.3, 8.3], [8.3, 14.4], [14.4, 19.4], [19.4, 24.6], [24.6, 27.6], [27.6, 30.2]]
+  const TRANSCRIPT = 'Build a prompt that sorts our support emails into billing, bugs and feature requests.'
+  const WHY = 'Labels follow a pattern, so worked examples teach it best — and step-by-step reasoning explains each label.'
+
+  // Build dynamic bits once.
+  for (let i = 0; i < 30; i++) $('s1wave').appendChild(document.createElement('i'))
+  for (let i = 0; i < 9; i++) $('s2wave').appendChild(document.createElement('i'))
+  for (let i = 0; i < 5; i++) { const d = document.createElement('div'); d.appendChild(document.createElement('i')); $('progress').appendChild(d) }
+
+  function renderDesign(t) {
+    // Background drift
+    $('glowA').style.transform = `translate(${Math.sin(t * .35) * 40}px, ${Math.cos(t * .3) * 30}px)`
+    $('glowB').style.transform = `translate(${Math.cos(t * .28) * 40}px, ${Math.sin(t * .33) * 30}px)`
+    SCENES.forEach(([a, b], i) => { $('s' + i).style.opacity = win(t, a, b, i === 0 ? .01 : .4) })
+    $('brand').style.opacity = 1 - win(t, 27.4, 31, .5)
+
+    // Progress across the five feature scenes
+    ;[...$('progress').children].forEach((d, i) => {
+      const [a, b] = SCENES[i + 1]
+      d.firstChild.style.width = (seg(t, a, b) * 100) + '%'
+    })
+    $('progress').style.opacity = clamp(seg(t, 3.1, 3.6)) * (1 - seg(t, 27.3, 27.8))
+
+    // Scene 0 — hook
+    rise($('s0a'), easeOut(seg(t, .15, .75)), 40)
+    rise($('s0b'), easeOut(seg(t, 1.35, 1.95)), 40)
+
+    // Scene 1 — speak
+    rise($('s1h'), easeOut(seg(t, 3.4, 3.9)))
+    rise($('s1p'), easeOut(seg(t, 3.6, 4.2)), 50)
+    const talking = t > 4.1 && t < 7.5
+    ;[...$('s1wave').children].forEach((bar, i) => {
+      const amp = talking ? (.35 + .65 * Math.abs(Math.sin(t * 7.3 + i * .55) * Math.cos(t * 3.1 + i * .9))) : .08
+      bar.style.height = (8 + amp * 60) + 'px'
+    })
+    $('s1ring').style.transform = `scale(${1 + (talking ? .08 * Math.sin(t * 6) + .06 : 0)})`
+    const typed = Math.round(TRANSCRIPT.length * easeInOut(seg(t, 4.3, 7.3)))
+    $('s1text').textContent = TRANSCRIPT.slice(0, typed)
+    $('s1caret').style.opacity = (t < 7.6 && Math.floor(t * 2.5) % 2 === 0) || talking ? 1 : 0
+    $('s1label').textContent = t < 7.5 ? 'Listening…' : 'Transcribed — ready to go'
+
+    // Scene 2 — adaptive questions read aloud, answered by voice
+    rise($('s2h'), easeOut(seg(t, 8.4, 8.9)))
+    rise($('s2p'), easeOut(seg(t, 8.6, 9.2)), 50)
+    ;['o1', 'o2', 'o3'].forEach((id, i) => rise($(id), easeOut(seg(t, 9.4 + i * .45, 9.85 + i * .45)), 18))
+    const listening = t >= 11.2
+    $('s2speak').style.display = listening ? 'none' : 'flex'
+    $('s2listen').style.display = listening ? 'flex' : 'none'
+    ;[...$('s2wave').children].forEach((bar, i) => {
+      const live = t > 11.5 && t < 12.6
+      bar.style.height = (5 + (live ? Math.abs(Math.sin(t * 9 + i * .8)) * 22 : 2)) + 'px'
+    })
+    $('s2heard').textContent = t < 11.9 ? 'Listening — just answer' : t < 12.7 ? 'Heard “option two”' : 'Heard “option two” → selected option 2'
+    $('o2').classList.toggle('sel', t >= 12.7)
+    $('o2').style.transform = t >= 12.7 ? `scale(${1 + .03 * (1 - easeOut(seg(t, 12.7, 13.1)))})` : $('o2').style.transform
+    rise($('s2toast'), easeOut(seg(t, 13.1, 13.5)), 20)
+
+    // Scene 3 — technique selection
+    rise($('s3h'), easeOut(seg(t, 14.5, 15)))
+    rise($('s3p'), easeOut(seg(t, 14.7, 15.3)), 50)
+    pop($('c0'), easeOut(seg(t, 15.2, 15.5)) * (1 - seg(t, 16.25, 16.55)))
+    $('c0').style.display = t < 16.55 ? 'block' : 'none'
+    $('c0s').style.transform = `scaleX(${easeOut(seg(t, 15.75, 16.15))})`
+    pop($('c1'), easeOut(seg(t, 16.6, 16.95)))
+    pop($('c2'), easeOut(seg(t, 17.05, 17.4)))
+    pop($('c3'), easeOut(seg(t, 17.5, 17.85)))
+    $('s3why').textContent = WHY.slice(0, Math.round(WHY.length * seg(t, 17.8, 18.7)))
+    $('s3menu').style.opacity = .9 * easeOut(seg(t, 15.4, 16.2))
+
+    // Scene 4 — feedback learning (331 → 270 words measured live)
+    rise($('s4h'), easeOut(seg(t, 19.5, 20)))
+    rise($('s4p'), easeOut(seg(t, 19.7, 20.3)), 50)
+    $('r1').classList.toggle('on', t >= 20.6)
+    $('r3').classList.toggle('on', t >= 21.0)
+    const press = seg(t, 21.4, 21.7)
+    $('s4btn').style.transform = `scale(${1 - .05 * Math.sin(press * Math.PI)})`
+    const shrink = easeInOut(seg(t, 21.8, 23.2))
+    const words = Math.round(331 - (331 - 270) * shrink)
+    $('s4num').textContent = words + ' words'
+    $('s4bar').style.width = (100 * words / 331) + '%'
+    rise($('s4pill'), easeOut(seg(t, 23.3, 23.7)), 16)
+
+    // Scene 5 — insert, never send
+    rise($('s5h'), easeOut(seg(t, 24.7, 25.2)))
+    ;['t1', 't2', 't3'].forEach((id, i) => {
+      rise($(id), easeOut(seg(t, 24.9 + i * .18, 25.4 + i * .18)), 40)
+      $(id).querySelectorAll('.line').forEach((line, j) => { line.style.transform = `scaleX(${easeOut(seg(t, 25.6 + i * .15 + j * .12, 26.0 + i * .15 + j * .12))})` })
+    })
+    pop($('s5guard'), easeOut(seg(t, 26.2, 26.6)))
+
+    // Scene 6 — end card
+    pop($('s6logo'), easeOut(seg(t, 27.8, 28.3)))
+    rise($('s6t'), easeOut(seg(t, 28.0, 28.5)))
+    rise($('s6tag'), easeOut(seg(t, 28.25, 28.75)))
+    rise($('s6steps'), easeOut(seg(t, 28.5, 29.0)))
+    pop($('s6beta'), easeOut(seg(t, 28.8, 29.2)))
+  }
+  // Voice-over sync: render.mjs sets ANCHORS ([[designTime, realTime], ...]) from voice/timeline.json.
+  // Real time is mapped piecewise-linearly onto the 30 s design timeline, so scenes slow down to fit the narration.
+  window.ANCHORS = null
+  window.DURATION = 30
+  window.useAnchors = function (anchors) { window.ANCHORS = anchors; window.DURATION = anchors[anchors.length - 1][1] }
+  function toDesign(t) {
+    const a = window.ANCHORS
+    if (!a) return t
+    for (let i = 1; i < a.length; i++) {
+      if (t <= a[i][1]) { const [d0, r0] = a[i - 1], [d1, r1] = a[i]; return d0 + (d1 - d0) * (r1 > r0 ? (t - r0) / (r1 - r0) : 1) }
+    }
+    return a[a.length - 1][0]
+  }
+  window.render = (t) => renderDesign(toDesign(t))
+  window.render(0)
+</script>
+</body>
+</html>

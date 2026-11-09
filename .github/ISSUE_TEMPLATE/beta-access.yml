@@ -1,0 +1,34 @@
+name: Request beta access
+description: Get notified when the one-click Chrome Web Store version is ready, or ask for help joining the beta.
+title: "Beta access: "
+labels: ["beta-access"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your interest in Voice Prompt Builder! This issue is public, so please don't include API keys, tokens or other private details.
+  - type: dropdown
+    id: want
+    attributes:
+      label: What would you like?
+      options:
+        - Notify me when the one-click Chrome Web Store version is ready
+        - Help setting up the current beta
+        - Both
+    validations:
+      required: true
+  - type: dropdown
+    id: usage
+    attributes:
+      label: Where do you use AI chat most?
+      multiple: true
+      options:
+        - ChatGPT
+        - Claude
+        - Gemini
+        - Other
+  - type: textarea
+    id: usecase
+    attributes:
+      label: What would you use it for?
+      description: Optional. A sentence about the prompts you write helps us prioritise.
