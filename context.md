@@ -4,6 +4,12 @@ Snapshot: 2026-10-29 (Asia/Kolkata).
 
 Project folder: `D:\gnani ai\Voice-Prompt-Builder`
 
+## Status update — 2026-11-14 (Claude Code): one-page solution pitch
+
+- Added `PITCH.md` (≤1 page: problem, solution, why it matters, build, next steps, team) and `PITCH.pdf` (A4, verified 1 page; rendered from the Markdown with Playwright). Copy at `site/pitch.pdf`, linked from the site nav and hero; README links both near the top. Written for the Great Indian AI Internship Challenge submission.
+- Pages is live (2026-11-10 check: 200, og:image set). Remote had `33ddda0 chore: Update .gitignore` from Sparsh; fast-forwarded before this change.
+- **Next action**: confirm the challenge submission form accepts the repo/site link; regenerate the PDF if PITCH.md changes (script lived in the session scratchpad: minimal Markdown → HTML → `page.pdf`).
+
 ## Status update — 2026-11-09 evening (Claude Code): public landing page + USP video
 
 **What changed**

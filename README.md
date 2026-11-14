@@ -4,6 +4,8 @@ Voice Prompt Builder is a voice-first Chrome side panel that turns a rough reque
 
 **Website and demo video:** https://sparshsunilnaik.github.io/Voice-Prompt-Builder/
 
+**Solution pitch (1 page):** [PITCH.md](PITCH.md) · [PDF](PITCH.pdf)
+
 ## Features
 
 - Speech capture through the browser microphone and Gnani Prisma v2.5 transcription
